@@ -5,8 +5,9 @@ import math
 import numpy as np
 from typing import List, Tuple
 
-from src import rng, clamp
+from src import rng
 from src.algorithm import GeneticClewEvolution
+from src.helpers import clamp
 from src.image_manipulation import edge_enhance
 from src.worm import Camo_Worm
 from src.worm_mask import WormMask
@@ -18,27 +19,30 @@ class GreedyClewEvolution(GeneticClewEvolution):
     This implementation just makes random mutations and only keeps
     mutations that improve the score of the worm.
     """
+
     def __init__(self, image, clew: List[Camo_Worm]):
         super().__init__(image, clew, name="Greedy")
         self.edge_enhanced_image = edge_enhance(image)
 
-    def score(self, worm: Camo_Worm, worm_mask: WormMask):
+    def score(self, worm: Camo_Worm, worm_mask: WormMask) -> float:
         """ A basic benchmark scoring function. """
-        score = 0
+        score = 0.0
 
         # Promotes the worms being similar colour to their background.
-        score -= 100 * np.sum(worm_mask.difference_image()) / max(1, worm_mask.area)
+        score -= 100 * np.sum(worm_mask.difference_image()
+                              ) / max(1, worm_mask.area)
 
         # Promotes the regions outside the worm being dissimilar colour.
         outer_mask = worm_mask.create_outer_mask()
-        score += 50 * np.sum(outer_mask.difference_image()) / max(1, outer_mask.area)
+        score += 50 * np.sum(outer_mask.difference_image()
+                             ) / max(1, outer_mask.area)
 
         # Promotes bigger worms if the worms are already decent.
         score += (0.5 * worm.width + 0.2 * worm.r if score > -3 else 0)
 
         # Attempts to avoid overlapping and close worms.
-        close_penalty = 0
-        overlap_penalty = 0
+        close_penalty = 0.0
+        overlap_penalty = 0.0
         for other_index in range(len(self.clew)):
             other_worm = self.clew[other_index]
             # Give earlier worms in the clew priority
@@ -46,8 +50,11 @@ class GreedyClewEvolution(GeneticClewEvolution):
                 break
 
             other_worm_mask = self.clew_masks[other_index]
-            close_penalty += max(0.0, 500 - worm_mask.midpoint_distance_squared(other_worm_mask))
-            overlap_penalty += max(0.0, worm_mask.intersection(other_worm_mask) - 0.1)  # Allow 10% overlap
+            close_penalty += max(0.0, 500 -
+                                 worm_mask.midpoint_distance_squared(other_worm_mask))
+            # Allow 10% overlap
+            overlap_penalty += max(0.0,
+                                   worm_mask.intersection(other_worm_mask) - 0.1)
 
         score -= 0.1 * close_penalty
         score -= 20 * overlap_penalty
