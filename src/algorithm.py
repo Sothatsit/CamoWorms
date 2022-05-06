@@ -19,6 +19,7 @@ class GeneticClewEvolution:
     Provides methods to evolve a clew of camo worms
     to clean up an image using a basic genetic algorithm.
     """
+
     def __init__(self, image, clew: List[Camo_Worm], *, name="Clew"):
         self.name = name
         self.image = image
@@ -36,13 +37,15 @@ class GeneticClewEvolution:
         """
         Calculates the score of the given worm.
         """
-        raise Exception("score is unimplemented for {}".format(type(self).__name__))
+        raise Exception(
+            "score is unimplemented for {}".format(type(self).__name__))
 
     def update(self, worm: Camo_Worm, worm_mask: WormMask) -> Tuple[Camo_Worm, WormMask]:
         """
         Creates
         """
-        raise Exception("update is unimplemented for {}".format(type(self).__name__))
+        raise Exception(
+            "update is unimplemented for {}".format(type(self).__name__))
 
     def score_clew(self) -> float:
         """
@@ -90,7 +93,7 @@ class GeneticClewEvolution:
         """
         Evolves a single generation.
         """
-        start_time = time.time()
+        start_time = time.perf_counter()
 
         for index in range(len(self.clew)):
             worm = self.clew[index]
@@ -104,7 +107,7 @@ class GeneticClewEvolution:
         new_score = self.score_clew()
         self.generation_scores.append(new_score)
 
-        duration = time.time() - start_time
+        duration = time.perf_counter() - start_time
         print("Generation {}: {:.3f}  (took {:.2f} seconds)".format(
             self.generation, new_score, duration
         ))
