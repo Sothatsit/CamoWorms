@@ -10,7 +10,7 @@ from typing import List, Tuple
 from skimage.metrics import structural_similarity
 
 from src.plotting import Drawing
-from src.worm import Camo_Worm
+from src.worm import CamoWorm
 from src.worm_mask import WormMask
 
 
@@ -19,28 +19,27 @@ class GeneticClewEvolution:
     Provides methods to evolve a clew of camo worms
     to clean up an image using a basic genetic algorithm.
     """
-
-    def __init__(self, image, clew: List[Camo_Worm], *, name="Clew"):
+    def __init__(self, image, clew: list[CamoWorm], *, name="Clew"):
         self.name = name
         self.image = image
         self.clew = clew
         self.clew_masks = [WormMask(worm, image) for worm in clew]
         for index in range(len(self.clew)):
-            colour = self.clew_masks[index].mean_colour
+            colour = self.clew_masks[index].mean_colour()
             if colour is not None:
-                self.clew[index].colour = self.clew_masks[index].mean_colour
+                self.clew[index].colour = colour
 
         self.generation = 0
         self.generation_scores = [self.score_clew()]
 
-    def score(self, worm: Camo_Worm, worm_mask: WormMask) -> float:
+    def score(self, worm: CamoWorm, worm_mask: WormMask) -> float:
         """
         Calculates the score of the given worm.
         """
         raise Exception(
             "score is unimplemented for {}".format(type(self).__name__))
 
-    def update(self, worm: Camo_Worm, worm_mask: WormMask) -> Tuple[Camo_Worm, WormMask]:
+    def update(self, worm: CamoWorm, worm_mask: WormMask) -> Tuple[CamoWorm, WormMask]:
         """
         Creates
         """
@@ -62,15 +61,14 @@ class GeneticClewEvolution:
         """
         Draws the worm masks of the worms in the clew into image.
         """
-        image = np.zeros(self.image.shape) if image is None else image
-        image = image.copy()
+        image = np.zeros(self.image.shape) if image is None else image.copy()
 
         for worm, mask in zip(self.clew, self.clew_masks):
             mask.draw_into(image, worm.colour * 255.0)
 
         return image
 
-    def plot_clew(self, include_target_image: bool = False):
+    def plot_clew(self, *, include_target_image: bool = False, exclude_background: bool = False):
         """
         Draws the current clew of worms on the image.
         """
@@ -78,7 +76,7 @@ class GeneticClewEvolution:
             drawing = Drawing(self.image)
             drawing.show(title="Target Image")
 
-        background = self.image * 0.5
+        background = 0.25 * 255 + 0.5 * self.image if not exclude_background else None
         drawing = Drawing(self.draw_clew(background))
         drawing.show(title="{} gen-{}".format(self.name, self.generation))
 
@@ -101,8 +99,6 @@ class GeneticClewEvolution:
             new_worm, new_worm_mask = self.update(worm, worm_mask)
             self.clew[index] = new_worm
             self.clew_masks[index] = new_worm_mask
-
-        self.generation += 1
 
         new_score = self.score_clew()
         self.generation_scores.append(new_score)

@@ -14,12 +14,14 @@ from sklearn.metrics.pairwise import euclidean_distances
 from src import rng
 
 
-class Camo_Worm:
+class CamoWorm:
     """
     A worm.
     """
+    def __init__(
+            self, x: float, y: float, r: float, theta: float, deviation_r: float,
+            deviation_gamma: float, width: float, colour: float):
 
-    def __init__(self, x, y, r, theta, deviation_r, deviation_gamma, width, colour):
         self.x = x
         self.y = y
         self.r = r
@@ -31,17 +33,19 @@ class Camo_Worm:
 
         e_dr = abs(self.dr)
         e_theta = self.theta + (math.pi if self.dr < 0 else 0)
+
         p0 = [self.x - self.r * np.cos(e_theta),
               self.y - self.r * np.sin(e_theta)]
         p2 = [self.x + self.r * np.cos(e_theta),
               self.y + self.r * np.sin(e_theta)]
         p1 = [self.x + e_dr * np.cos(e_theta+self.dgamma),
               self.y + e_dr * np.sin(e_theta+self.dgamma)]
+
         self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
 
     def copy(self, *, x=None, y=None, r=None, theta=None, dr=None, dgamma=None, width=None, colour=None):
         """ Creates a copy of this worm with any defined properties overridden. """
-        return Camo_Worm(
+        return CamoWorm(
             self.x if x is None else x,
             self.y if y is None else y,
             self.r if r is None else r,
@@ -53,7 +57,7 @@ class Camo_Worm:
         )
 
     @staticmethod
-    def random(image_shape: Tuple[int, int]) -> 'Camo_Worm':
+    def random(image_shape: Tuple[int, int]) -> 'CamoWorm':
         (ylim, xlim) = image_shape
         midx = xlim * rng.random()
         midy = ylim * rng.random()
@@ -62,8 +66,8 @@ class Camo_Worm:
         dr = 5 * rng.standard_normal()
         dgamma = rng.random() * np.pi
         colour = rng.random()
-        width = 3 + 2 * rng.standard_gamma(1)
-        return Camo_Worm(midx, midy, r, theta, dr, dgamma, width, colour)
+        width = 4 + 2 * rng.standard_gamma(1)
+        return CamoWorm(midx, midy, r, theta, dr, dgamma, width, colour)
 
     def control_points(self):
         return self.bezier.control_points
@@ -91,7 +95,7 @@ class Camo_Worm:
         return np.array(colours) / 255.0
 
     def __str__(self):
-        return "Camo_Worm({}, {}, {}, {}, {}, {}, {}, {})".format(
+        return "CamoWorm({:.0f}, {:.0f}, {:.0f}, {:.2f}, {:.0f}, {:.2f}, {:.1f}, {:.2f})".format(
             self.x, self.y,
             self.r, self.theta,
             self.dr, self.dgamma,
@@ -99,4 +103,4 @@ class Camo_Worm:
         )
 
 
-Clew: TypeAlias = list[Camo_Worm]
+Clew: TypeAlias = list[CamoWorm]
