@@ -1,32 +1,39 @@
 """
 This file contains logic to search for the best parameters to use for a worm.
 """
-from typing import Callable
-
 import numpy as np
-from src import NPImage
+from src import NpImage
+from src.helpers import clamp
 from src.worm import CamoWorm
 from src.worm_mask import WormMask
 
 
 def score_worm_mask(mask: WormMask, outer_mask: WormMask) -> float:
     """ Scores the given worm mask based on what is below and around it in the image. """
-    if mask.area <= 0:
+    if mask.area <= 10:
         return -1
 
     # Promotes the worms being similar colour to their background.
-    score = -np.sum(mask.difference_image()) / max(1, mask.area)
+    body_score = -np.sum(mask.difference_image()) / max(1, mask.area)
+
+    # Promotes larger good worms, by a little.
+    # Works against larger bad worms, by a little.
+    body_score += 0.1
+    body_score *= clamp(mask.area, 1, 1000)**0.3
+    body_score *= clamp(mask.area - 1000, 1, 1000)**0.15
+    body_score -= 0.1
 
     # Promotes the regions outside the worm being dissimilar colour.
-    score += np.sum(outer_mask.difference_image()) / max(1, outer_mask.area)
+    edge_score = np.sum(outer_mask.difference_image()) / max(1, outer_mask.area)
+    edge_score *= max(1, outer_mask.area) ** 0.3
 
     # We bias the result as we want a score of 0 to represent an okay worm.
-    return 0.05 + score
+    return -0.5 + 0.8 * body_score + 1.2 * edge_score
 
 
 def locally_optimise_worm(
-        image: NPImage, worm: CamoWorm,
-        *, min_width: float = 4, max_width: float = 16, close: float = 2):
+        image: NpImage, worm: CamoWorm,
+        *, min_width: float = 4, max_width: float = 16):
     """
     Searches for the best-scoring width and colour for the given worm.
     Returns the inner and outer masks of the worm.
@@ -69,7 +76,7 @@ def locally_optimise_worm(
     return mask, outer_mask
 
 
-def locally_optimise_clew(image: NPImage, clew: list[CamoWorm]) -> list[tuple[WormMask, WormMask]]:
+def locally_optimise_clew(image: NpImage, clew: list[CamoWorm]) -> list[tuple[WormMask, WormMask]]:
     """ Runs the local search optimisation on each worm in a clew. """
     output_masks = []
     for worm in clew:

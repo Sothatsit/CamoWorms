@@ -3,7 +3,7 @@ from typing import Optional, Final
 
 import numpy as np
 
-from src import NPImage
+from src import NpImage, NpImageDType
 from src.worm import CamoWorm
 
 
@@ -67,7 +67,7 @@ class CircleMask:
         # Pixel-by-pixel distances.
         self.distances = xx**2 + yy**2
 
-    def _get_overlapping_areas(self, target_distances: NPImage, x: float, y: float):
+    def _get_overlapping_areas(self, target_distances: NpImage, x: float, y: float):
         """
         Returns a tuple of (target area, source area).
         """
@@ -94,7 +94,7 @@ class CircleMask:
         source_area = self.distances[circle_from_x:circle_to_x, circle_from_y:circle_to_y]
         return target_area, source_area
 
-    def apply(self, target_distances: NPImage, x: float, y: float):
+    def apply(self, target_distances: NpImage, x: float, y: float):
         """
         Draws this circle into the target distance image with its center at (x, y).
         """
@@ -104,7 +104,7 @@ class CircleMask:
 
         np.minimum(target_area, source_area, out=target_area)
 
-    def remove_from_mask(self, target_mask: NPImage, x: float, y: float):
+    def remove_from_mask(self, target_mask: NpImage, x: float, y: float):
         """
         Erases this circle from the target mask with its center at (x, y).
         """
@@ -151,7 +151,7 @@ class WormMask:
     FAR_DISTANCE: Final[float] = 1e12
     OUTER_MAX_DIST: Final[int] = 10
 
-    def __init__(self, worm: CamoWorm, image: NPImage, *, copy: 'WormMask' = None):
+    def __init__(self, worm: CamoWorm, image: NpImage, *, copy: 'WormMask' = None):
         self.worm = worm
         self.image = image
 
@@ -185,13 +185,13 @@ class WormMask:
             if width <= 0 or height <= 0:
                 self.min_x = 0
                 self.min_y = 0
-                self.distances = np.full((1, 1), WormMask.FAR_DISTANCE, dtype=np.float64)
+                self.distances = np.full((1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
             else:
                 # 2. Some points are really close together, so we can filter some of them out for speed.
                 self.points = filter_out_close_points(self.points, point_interval=2)
 
                 # 3. Apply a circle mask at each point on the curve to the mask.
-                self.distances = np.full((width, height), WormMask.FAR_DISTANCE, dtype=np.float64)
+                self.distances = np.full((width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)
                 circle_mask = CircleMask.get_cached(math.ceil(radius) + WormMask.OUTER_MAX_DIST)
                 for y, x in self.points:
                     circle_mask.apply(self.distances, x - self.min_x, y - self.min_y)
@@ -213,7 +213,7 @@ class WormMask:
     def recalculate_mask(self):
         """ Re-calculates the mask based upon the worm associated with this mask. """
         self.mask = self.distances < self.radius**2
-        self.area = float(np.sum(self.mask))
+        self.area = np.sum(self.mask)
 
     def create_outer_mask(self, *, dest: 'WormMask' = None) -> 'WormMask':
         """
@@ -303,7 +303,7 @@ class WormMask:
 
         return np.sum(self.image_under_mask(image)) / self.area
 
-    def mode_colour(self, image=None):
+    def median_colour(self, image=None):
         """
         Returns the most common colour of all pixels underneath this mask in the image.
         """
@@ -316,8 +316,8 @@ class WormMask:
 
         colours = np.sort(sub_image.flatten())
         first_index = np.flatnonzero(colours > 0)[0]
-        mode_index = math.floor((first_index + len(colours) - 1) / 2.0)
-        return colours[mode_index] - 1
+        median_index = math.floor((first_index + len(colours) - 1) / 2.0)
+        return colours[median_index] - 1
 
     def subsection(self, min_x, min_y, max_x, max_y):
         """
@@ -339,14 +339,14 @@ class WormMask:
 
     def intersection(self, other: 'WormMask') -> float:
         """
-        Calculates the percentage of area that intersects between this mask and other.
+        Calculates the percentage of this mask's area that intersects with the other mask.
         """
         sub_self = self.subsection(other.min_x, other.min_y, other.max_x, other.max_y)
         if sub_self is None:
             return 0
 
         sub_other = other.subsection(self.min_x, self.min_y, self.max_x, self.max_y)
-        return np.sum(np.minimum(sub_self, sub_other)) / max(1.0, min(self.area, other.area))
+        return np.sum(np.minimum(sub_self, sub_other)) / max(1, self.area)
 
     def midpoint_distance_squared(self, other: 'WormMask'):
         """

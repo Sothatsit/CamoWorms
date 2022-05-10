@@ -3,4 +3,5 @@ import numpy as np
 from numpy.typing import NDArray
 
 rng: np.random.Generator = np.random.default_rng()
-NPImage: TypeAlias = NDArray[np.float64]
+NpImageDType = np.float32
+NpImage: TypeAlias = NDArray[NpImageDType]

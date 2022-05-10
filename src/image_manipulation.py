@@ -9,10 +9,10 @@ from scipy import fftpack
 from scipy.ndimage import median_filter, gaussian_filter
 from scipy.signal import convolve2d
 
-from src import NPImage
+from src import NpImage
 
 
-def crop(image: NPImage, mask: Tuple[int, int, int, int]) -> NPImage:
+def crop(image: NpImage, mask: Tuple[int, int, int, int]) -> NpImage:
     """ Crops the image to the given region described by (min_x, max_x, min_y, max_y). """
     h, w = np.shape(image)
     return image[
@@ -21,26 +21,26 @@ def crop(image: NPImage, mask: Tuple[int, int, int, int]) -> NPImage:
     ]
 
 
-def blur(image: NPImage, *, sigma=2) -> NPImage:
+def blur(image: NpImage, *, sigma=2) -> NpImage:
     """ Blur the image using a Gaussian filter. """
     return gaussian_filter(image, sigma=sigma)
 
 
-def mean_window(image: NPImage, *, window=3, times=1) -> NPImage:
+def mean_window(image: NpImage, *, window=3, times=1) -> NpImage:
     """ Run an averaging filter over the image. """
     for i in range(times):
         image = convolve2d(image, np.ones((window, window)) / (window ** 2), mode="same")
     return image
 
 
-def median_window(image: NPImage, *, window=3, times=1) -> NPImage:
+def median_window(image: NpImage, *, window=3, times=1) -> NpImage:
     """ Run an averaging filter over the image. """
     for i in range(times):
         image = median_filter(image, size=window)
     return image
 
 
-def fft_denoise(image: NPImage, *, coeff=0.25) -> NPImage:
+def fft_denoise(image: NpImage, *, coeff=0.25) -> NpImage:
     """
     This uses a 2-dimensional fourier transform and a subsequent
     low-pass filter to reduce high-frequency noise.
@@ -61,17 +61,17 @@ def fft_denoise(image: NPImage, *, coeff=0.25) -> NPImage:
     return np.minimum(np.maximum(image, 0), 255)
 
 
-def scale_brighten(image: NPImage) -> NPImage:
+def scale_brighten(image: NpImage) -> NpImage:
     """ Scales the image so that the darkest pixel is 0, and the brightest is 255. """
     return np.interp(image, (image.min(), image.max()), (0.0, 255.0))
 
 
-def scale_01(image: NPImage) -> NPImage:
+def scale_01(image: NpImage) -> NpImage:
     """ Scales the image so that the darkest pixel is 0, and the brightest is 1. """
     return np.interp(image, (image.min(), image.max()), (0.0, 1.0))
 
 
-def extremify(image: NPImage, *, coeff=2.0) -> NPImage:
+def extremify(image: NpImage, *, coeff=2.0) -> NpImage:
     """
     Makes dark pixels darker and bright pixels brighter.
     If coeff is larger, then this is more extreme.
@@ -84,7 +84,7 @@ def extremify(image: NPImage, *, coeff=2.0) -> NPImage:
     return scale_brighten(shifted)
 
 
-def local_brighten(image: NPImage, *, local_area_window=30, limit=0.2, scale_coefficient=3.0) -> NPImage:
+def local_brighten(image: NpImage, *, local_area_window=20, limit=0.2, scale_coefficient=3.0) -> NpImage:
     """ Brightens regions of the image based upon the brightness of their surroundings. """
     # Scale the image into the range [0, 1].
     image = scale_01(image)
@@ -93,7 +93,11 @@ def local_brighten(image: NPImage, *, local_area_window=30, limit=0.2, scale_coe
     local_brightness = gaussian_filter(image, sigma=local_area_window)
 
     # Apply limits so that the image cannot be changed too much.
-    local_brightness = np.minimum(np.maximum(local_brightness, limit), 1 - limit)
+    np.clip(local_brightness, limit, 1 - limit, out=local_brightness)
+
+    # Shift the image towards its local brightness, away from 0.5.
+    shift = 0.3 * (local_brightness - 0.5)
+    image += shift
 
     # Apply the scaling relative to the local brightness.
     locally_brightened = extremify(image - local_brightness, coeff=scale_coefficient)
@@ -102,7 +106,7 @@ def local_brighten(image: NPImage, *, local_area_window=30, limit=0.2, scale_coe
     return 255 * limit * image + (1 - limit) * locally_brightened
 
 
-def edge_enhance(image: NPImage, *, edge_weight=0.5) -> NPImage:
+def edge_enhance(image: NpImage, *, edge_weight=0.5) -> NpImage:
     """
     Attempts to enhance lines in the given image using a mixture
     of brightening and darkening different regions of the image,
@@ -112,7 +116,7 @@ def edge_enhance(image: NPImage, *, edge_weight=0.5) -> NPImage:
     image = local_brighten(blur(image, sigma=1))
 
     # Mangle the image to help get stronger edges.
-    median_image = local_brighten(median_window(blur(image), times=2)) / 255.0
+    median_image = local_brighten(median_window(image, times=2)) / 255.0
 
     # Detect its edges using a Sobel convolution.
     kernel_x = np.array(
@@ -134,3 +138,12 @@ def edge_enhance(image: NPImage, *, edge_weight=0.5) -> NPImage:
 
     # Brighten the resulting image.
     return image
+
+
+def find_median_colour(image: NpImage) -> float:
+    """
+    Determines the median colour of the image.
+    """
+    colours = np.sort(image.flatten())
+    median_index = math.floor((len(colours) - 1) / 2.0)
+    return colours[median_index] - 1

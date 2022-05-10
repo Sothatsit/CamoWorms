@@ -34,12 +34,15 @@ class CamoWorm:
         e_dr = abs(self.dr)
         e_theta = self.theta + (math.pi if self.dr < 0 else 0)
 
-        p0 = [self.x - self.r * np.cos(e_theta),
-              self.y - self.r * np.sin(e_theta)]
-        p2 = [self.x + self.r * np.cos(e_theta),
-              self.y + self.r * np.sin(e_theta)]
-        p1 = [self.x + e_dr * np.cos(e_theta+self.dgamma),
-              self.y + e_dr * np.sin(e_theta+self.dgamma)]
+        dx = -0.1 * self.r * np.cos(e_theta)
+        dy = -0.1 * self.r * np.sin(e_theta)
+
+        p0 = [self.x + dx - self.r * np.cos(e_theta),
+              self.y + dy - self.r * np.sin(e_theta)]
+        p2 = [self.x + dx + self.r * np.cos(e_theta),
+              self.y + dy + self.r * np.sin(e_theta)]
+        p1 = [self.x + dx + e_dr * np.cos(e_theta+self.dgamma),
+              self.y + dy + e_dr * np.sin(e_theta+self.dgamma)]
 
         self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
 
