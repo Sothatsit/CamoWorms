@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import time
 from typing import Callable, TypeAlias
-from src.worm import Camo_Worm, Clew
+from src.worm import Clew
 import random
 
 RandomClewFunction: TypeAlias = Callable[[], Clew]
