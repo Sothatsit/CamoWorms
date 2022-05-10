@@ -3,7 +3,6 @@ This file contains a generic template that can be extended
 to implement genetic evolution algorithms to evolve a clew
 of camo worms.
 """
-import os.path
 import time
 import numpy as np
 from typing import Tuple, Optional
@@ -13,7 +12,7 @@ from skimage.metrics import structural_similarity
 from src import NpImage
 from src.algorithms.local_search import locally_optimise_worm
 from src.image_manipulation import find_median_colour
-from src.plotting import Drawing
+from src.progress_image_generator import ProgressImageGenerator
 from src.worm import CamoWorm
 from src.worm_mask import WormMask
 
@@ -23,6 +22,7 @@ class GeneticClewEvolution:
     Provides methods to evolve a clew of camo worms
     to clean up an image using a basic genetic algorithm.
     """
+
     def __init__(
             self, image: NpImage, initial_clew_size: int,
             *, name="Clew", evolve_clew_size: bool = True, progress_dir: Optional[str] = "progress"):
@@ -33,7 +33,7 @@ class GeneticClewEvolution:
 
         self.clew: list[CamoWorm] = []
         self.clew_masks: list[WormMask] = []
-        for i in range(initial_clew_size):
+        for _ in range(initial_clew_size):
             self.add_new_random_worm()
 
         for index in range(len(self.clew)):
@@ -45,29 +45,12 @@ class GeneticClewEvolution:
         initial_ssim, _ = self.score_clew()
         self.generation_ssim_scores = [initial_ssim]
 
-        self.progress_dir = progress_dir
+        self.progress_image_generator = None
         if progress_dir is not None:
-            self.init_progress_directory()
-
-    def init_progress_directory(self):
-        """
-        Initialises the progress image directory.
-        """
-        if os.path.exists(self.progress_dir):
-            # Delete existing images.
-            for file in os.listdir(self.progress_dir):
-                if file.startswith("gen-") and file.endswith(".png"):
-                    os.remove(os.path.join(self.progress_dir, file))
-        else:
-            os.mkdir(self.progress_dir)
-
-        self.save_progress_image()
-
-    def get_generation_progress_file(self) -> str:
-        """
-        Returns the file to save the current progress plot image into.
-        """
-        return os.path.join(self.progress_dir, "gen-{}.png".format(self.generation))
+            self.progress_image_generator = ProgressImageGenerator(
+                image, name, progress_dir)
+            self.progress_image_generator.save_progress_image(
+                self.clew, self.clew_masks, self.generation)
 
     def score(self, worm: CamoWorm, worm_mask: WormMask) -> float:
         """
@@ -95,7 +78,8 @@ class GeneticClewEvolution:
         """
         generated = self.draw_clew()
         ssim = structural_similarity(self.image, generated, data_range=255)
-        scores = np.array([self.score(w, m) for w, m in zip(self.clew, self.clew_masks)])
+        scores = np.array([self.score(w, m)
+                          for w, m in zip(self.clew, self.clew_masks)])
         return ssim, scores
 
     def draw_clew(self, image=None):
@@ -114,38 +98,11 @@ class GeneticClewEvolution:
 
         return image
 
-    def save_progress_image(self):
-        """ Saves the current progress plot to the progress directory. """
-        if self.progress_dir is not None:
-            self.plot_clew(show_clew=False, exclude_background=True, do_save=True)
-
-    def plot_clew(
-            self, *,
-            show_target_image: bool = False,
-            exclude_background: bool = False,
-            show_clew: bool = True,
-            do_save: bool = False):
-        """
-        Draws the current clew of worms on the image.
-        """
-        if show_target_image:
-            drawing = Drawing(self.image)
-            drawing.plot(title="Target Image")
-
-        background = 0.25 * 255 + 0.5 * self.image if not exclude_background else None
-        drawing = Drawing(self.draw_clew(background))
-        save_file = self.get_generation_progress_file() if do_save else None
-        drawing.plot(
-            title="{} gen-{}".format(self.name, self.generation),
-            save=save_file,
-            do_show=show_clew
-        )
-
     def run_generations(self, generations):
         """
         Runs the given number of generations of evolution.
         """
-        for i in range(generations):
+        for _ in range(generations):
             self.run_generation()
 
     def remove_worst_worm(self, worm_scores):
@@ -220,7 +177,9 @@ class GeneticClewEvolution:
             break
 
         # Save progress.
-        self.save_progress_image()
+        if self.progress_image_generator is not None:
+            self.progress_image_generator.save_progress_image(
+                self.clew, self.clew_masks, self.generation)
 
         duration = time.perf_counter() - start_time
         print(
