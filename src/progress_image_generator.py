@@ -71,9 +71,9 @@ class ProgressImageGenerator:
         drawing = Drawing(image)
 
         file_path = os.path.join(
-            self.__progress_dir, f"gen-{generation_num:04}.png")
+            self.__progress_dir, f"gen-{generation_num:06}.png")
         drawing.plot(
-            title=f"{self.__run_title} gen-{generation_num:04}",
+            title=f"{self.__run_title} gen-{generation_num:06}",
             save=file_path,
             do_show=False
         )

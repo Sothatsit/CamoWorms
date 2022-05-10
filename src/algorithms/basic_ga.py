@@ -1,12 +1,15 @@
 from dataclasses import dataclass, field
 import time
-from typing import Callable, TypeAlias
-from src.worm import Clew
+from typing import Callable, Generic, TypeAlias, TypeVar
+from src.worm import CamoWorm, Clew
 import random
 
-RandomClewFunction: TypeAlias = Callable[[], Clew]
-CrossoverFunction: TypeAlias = Callable[[Clew, Clew], Clew]
-ClewCostFunction: TypeAlias = Callable[[Clew], float]
+IndividualType = TypeVar('IndividualType', Clew, CamoWorm)
+
+RandomIndividualFunction: TypeAlias = Callable[[], IndividualType]
+CrossoverFunction: TypeAlias = Callable[[
+    IndividualType, IndividualType], IndividualType]
+CostFunction: TypeAlias = Callable[[IndividualType], float]
 
 
 @dataclass
@@ -17,12 +20,12 @@ class GenerationResult:
 
 
 @dataclass(order=True)
-class Individual:
+class Individual(Generic[IndividualType]):
     cost: float
-    clew: Clew = field(compare=False)
+    underlying: IndividualType = field(compare=False)
 
 
-class ClewBasedGeneticAlgorithm:
+class BasicGeneticAlgorithm:
     """
     Provides methods to encapsulate the evolution of a population of clews.
 
@@ -32,24 +35,24 @@ class ClewBasedGeneticAlgorithm:
     def __init__(
             self,
             population_size: int,
-            cost_function: ClewCostFunction,
-            random_clew_function: RandomClewFunction,
-            random_crossover_function: CrossoverFunction):
+            cost_function: CostFunction,
+            random_individual_function: RandomIndividualFunction,
+            crossover_function: CrossoverFunction):
 
         self.population_size = population_size
         self.cost_function = cost_function
-        self.random_clew_function = random_clew_function
-        self.random_crossover_function = random_crossover_function
+        self.random_individual_function = random_individual_function
+        self.crossover_function = crossover_function
 
         self.population: list[Individual] = []
         self.generation: int = 0
         self.half_pop: int = self.population_size // 2
 
         for _ in range(population_size):
-            clew = self.random_clew_function()
-            cost = self.cost_function(clew)
+            underlying_individual = self.random_individual_function()
+            cost = self.cost_function(underlying_individual)
 
-            self.population.append(Individual(cost, clew))
+            self.population.append(Individual(cost, underlying_individual))
 
         self.population.sort()
 
@@ -67,13 +70,10 @@ class ClewBasedGeneticAlgorithm:
         start_time = time.perf_counter()
 
         for individual in self.population[self.half_pop:]:
-            if random.random() > 0.05:
-                individual.clew = self.random_crossover_function(
-                    individual.clew,
-                    random.choice(self.population[:self.half_pop]).clew)
-            else:
-                individual.clew = self.random_clew_function()
-            individual.cost = self.cost_function(individual.clew)
+            individual.underlying = self.crossover_function(
+                individual.underlying,
+                random.choice(self.population[:self.half_pop]).underlying)
+            individual.cost = self.cost_function(individual.underlying)
 
         self.population.sort()
 
