@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
 import time
 from typing import Callable, Generic, TypeAlias, TypeVar
-from src.worm import CamoWorm, Clew
 import random
 
-IndividualType = TypeVar('IndividualType', Clew, CamoWorm)
+IndividualType = TypeVar('IndividualType')
 
 RandomIndividualFunction: TypeAlias = Callable[[], IndividualType]
 CrossoverFunction: TypeAlias = Callable[[
@@ -25,26 +24,24 @@ class Individual(Generic[IndividualType]):
     underlying: IndividualType = field(compare=False)
 
 
-class BasicGeneticAlgorithm:
+class BasicGeneticAlgorithm(Generic[IndividualType]):
     """
-    Provides methods to encapsulate the evolution of a population of clews.
-
-    i.e. each clew is one member of the population
+    A simple generically typed genetic algorithm.
     """
 
     def __init__(
             self,
             population_size: int,
-            cost_function: CostFunction,
-            random_individual_function: RandomIndividualFunction,
-            crossover_function: CrossoverFunction):
+            cost_function: CostFunction[IndividualType],
+            random_individual_function: RandomIndividualFunction[IndividualType],
+            crossover_function: CrossoverFunction[IndividualType]):
 
         self.population_size = population_size
         self.cost_function = cost_function
         self.random_individual_function = random_individual_function
         self.crossover_function = crossover_function
 
-        self.population: list[Individual] = []
+        self.population: list[Individual[IndividualType]] = []
         self.generation: int = 0
         self.half_pop: int = self.population_size // 2
 
