@@ -83,7 +83,7 @@ class GeneticClewEvolution:
         stats = pstats.Stats(self.profiler).sort_stats(pstats.SortKey.TIME)
         stats.dump_stats(filename=self.profile_file)
 
-    def score(self, worm: CamoWorm, worm_mask: WormMask) -> float:
+    def score(self, worm: CamoWorm, worm_mask: WormMask, *, for_new_worm=False) -> float:
         """
         Calculates the score of the given worm.
         """
@@ -190,8 +190,8 @@ class GeneticClewEvolution:
         for i in range(test_worms):
             new_worm = CamoWorm.random(self.image.shape)
             new_worm_mask = WormMask(new_worm, self.image)
-            new_worm.colour = new_worm_mask.median_colour()
-            new_worm_score = self.score(new_worm, new_worm_mask)
+            new_worm.colour = new_worm_mask.mean_colour()
+            new_worm_score = self.score(new_worm, new_worm_mask, for_new_worm=True)
             if best_worm is None or new_worm_score > best_worm_score:
                 best_worm = new_worm
                 best_worm_score = new_worm_score

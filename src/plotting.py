@@ -38,10 +38,11 @@ class Drawing:
             self.add_patches([worms.patch()])
 
     def plot(self, *, save: Optional[str] = None, title: Optional[str] = None, do_show: bool = True):
+        plt.axis('off')
         if title is not None:
             plt.title(title, fontdict={"fontsize": 20, "fontweight": 700})
         if save is not None:
-            plt.savefig(save)
+            plt.savefig(save, bbox_inches="tight", facecolor="white")
         if do_show:
             plt.show()
         plt.close(self.fig)

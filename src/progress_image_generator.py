@@ -23,10 +23,6 @@ def build_gif(frame_directory_path: str, destination: str) -> None:
     with imageio.get_writer(destination, mode="I", duration=1/30) as writer:
         for frame_file in frame_files:
             frame = imageio.imread(frame_file)
-
-            # Crop to interesting part of frame
-            frame = frame[120:-155, 81:-64]
-
             writer.append_data(frame)
 
     pygifsicle.optimize(destination)

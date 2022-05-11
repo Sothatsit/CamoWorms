@@ -67,7 +67,8 @@ class CircleMask:
         # Pixel-by-pixel distances.
         self.distances = xx**2 + yy**2
 
-    def _get_overlapping_areas(self, target_distances: NpImage, x: float, y: float):
+    def _get_overlapping_areas(
+            self, target_distances: NpImage, x: float, y: float) -> Optional[tuple[NpImage, NpImage]]:
         """
         Returns a tuple of (target area, source area).
         """
@@ -81,7 +82,7 @@ class CircleMask:
         target_to_x = min(target_distances.shape[0] - 1, x + self.offset_x + self.width)
         target_to_y = min(target_distances.shape[1] - 1, y + self.offset_y + self.width)
         if target_from_x >= target_to_x or target_from_y >= target_to_y:
-            return None, None
+            return None
 
         # Calculate the bounds in the circle mask to paste.
         circle_from_x = target_from_x - x - self.offset_x
@@ -98,20 +99,22 @@ class CircleMask:
         """
         Draws this circle into the target distance image with its center at (x, y).
         """
-        target_area, source_area = self._get_overlapping_areas(target_distances, x, y)
-        if target_area is None or source_area is None:
+        areas = self._get_overlapping_areas(target_distances, x, y)
+        if areas is None:
             return
 
+        target_area, source_area = areas
         np.minimum(target_area, source_area, out=target_area)
 
     def remove_from_mask(self, target_mask: NpImage, x: float, y: float):
         """
         Erases this circle from the target mask with its center at (x, y).
         """
-        target_area, source_area = self._get_overlapping_areas(target_mask, x, y)
-        if target_area is None or source_area is None:
+        areas = self._get_overlapping_areas(target_mask, x, y)
+        if areas is None:
             return
 
+        target_area, source_area = areas
         source_mask = source_area < self.radius**2
         np.logical_not(target_area, out=target_area)
         np.logical_or(target_area, source_mask, out=target_area)
@@ -175,7 +178,7 @@ class WormMask:
         else:
             # 1. Calculate some information about the worm
             img_width, img_height = image.shape
-            radius = worm.width / 2 + 0.5
+            radius = worm.width / 2 + 1.5
             n_points_estimate = math.ceil(1.5 * worm.r + 1.5 * abs(worm.dr))
             self.points = worm.bezier(np.linspace(0, 1, num=n_points_estimate))
 

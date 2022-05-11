@@ -21,7 +21,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
     def __init__(self, image, clew_size: int):
         super().__init__(edge_enhance(image), clew_size, name="Greedy")
 
-    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap=1):
+    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap=0.5, for_new_worm=False):
         """ A basic benchmark scoring function. """
         score = 100 * score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
 
@@ -29,7 +29,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
         score += 0.15 * (1 if score > 0 else -1) * (worm.r + 2 * worm.width)
 
         # Attempts to avoid overlapping and close worms.
-        avoid_close = score < 0
+        avoid_close = for_new_worm or score < 0
         avoid_overlap = allowed_overlap < 1
         if avoid_close and avoid_overlap:
             close_penalty = 0.0
@@ -48,7 +48,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
                     overlap_penalty += max(0.0, intersection - allowed_overlap) / (1 - allowed_overlap)
 
             score -= 0.1 * close_penalty
-            score -= max(2 * score, 50) * overlap_penalty
+            score -= 50 * overlap_penalty
 
         return 0.5 * score
 
@@ -130,7 +130,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
                 continue
 
             mutated_worm_mask = WormMask(mutated_worm, self.image)
-            median_colour = mutated_worm_mask.median_colour()
+            median_colour = mutated_worm_mask.mean_colour()
             if median_colour is not None:
                 mutated_worm.colour = median_colour
 
