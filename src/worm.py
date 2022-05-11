@@ -23,14 +23,14 @@ class CamoWorm:
             self, x: float, y: float, r: float, theta: float, deviation_r: float,
             deviation_gamma: float, width: float, colour: float):
 
-        self.x: float = round_to(x, 0.5)
-        self.y: float = round_to(y, 0.5)
+        self.x: int = round(x)
+        self.y: int = round(y)
         self.r: float = round_to(r, 0.5)
         self.theta: float = round_to(theta, 0.005)
         self.dr: float = round_to(deviation_r, 0.5)
         self.dgamma: float = round_to(deviation_gamma, 0.005)
         self.width: float = round_to(width, 0.5)
-        self.colour: float = round_to(colour, 1/256)
+        self.colour: float = round_to(colour, 1/255)
 
         e_dr = abs(self.dr)
         e_theta = self.theta + (math.pi if self.dr < 0 else 0)

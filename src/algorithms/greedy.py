@@ -85,7 +85,9 @@ class GreedyClewEvolution(GeneticClewEvolution):
         colour = worm.colour + 0.05 * rng.standard_normal() * temp
 
         # If the deviation is small, then the angle doesn't matter that much, so standardise it.
-        if abs(dr) < r/20:
+        # This helps, as otherwise when dr is small, the dgamma value is effectively random
+        # as it has very little effect on the shape of the worm.
+        if abs(dr) < min(r/20, 3):
             dgamma = math.pi/2
 
         dr_max = r

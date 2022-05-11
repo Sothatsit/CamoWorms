@@ -118,13 +118,13 @@ class CircleMask:
         np.logical_not(target_area, out=target_area)
 
     @staticmethod
-    def get_cached(radius: float) -> 'CircleMask':
+    def get_cached(radius: float, *, quantize_accuracy: int = 2) -> 'CircleMask':
         """
         Tries to find a cached circle that is close in size to radius.
         If one can not be found, it creates it.
         """
-        # Quantize the radius into 0.25 pixel steps.
-        quantized = round(radius * 4)
+        # Quantize the radius into 0.5 pixel steps.
+        quantized = round(radius * quantize_accuracy)
 
         # Find if we have cached a circle already.
         cache = CircleMask.cache
@@ -139,7 +139,7 @@ class CircleMask:
                 cache.append(None)
 
         # Create the circle mask and cache it.
-        mask = CircleMask(quantized / 4)
+        mask = CircleMask(quantized / quantize_accuracy)
         cache[quantized] = mask
         return mask
 
@@ -151,7 +151,14 @@ class WormMask:
     FAR_DISTANCE: Final[float] = 1e12
     OUTER_MAX_DIST: Final[int] = 10
 
-    def __init__(self, worm: CamoWorm, image: NpImage, *, copy: 'WormMask' = None):
+    def __init__(self, worm: CamoWorm, image: NpImage,
+                 *, copy: 'WormMask' = None, all_widths_accurate: bool = False):
+        """
+        :param all_widths_accurate: The mask will be generated so that its distance array
+                                    will be accurate for all widths of worm. This is only
+                                    useful if you are testing many widths of worm. Otherwise,
+                                    for larger worms this really slows down mask generation.
+        """
         self.worm = worm
         self.image = image
 
@@ -172,7 +179,7 @@ class WormMask:
             n_points_estimate = math.ceil(2 * worm.r + 2 * abs(worm.dr))
             self.points = worm.bezier(np.linspace(0, 1, num=n_points_estimate))
 
-            # The padding is needed for the radius of th circle and the outer mask calculation.
+            # The padding is needed for the radius of the circle and the outer mask calculation.
             padding = math.ceil(radius * 1.5) + WormMask.OUTER_MAX_DIST
             self.min_x = max(0, math.floor(np.amin(self.points[:, 1])) - padding)
             self.min_y = max(0, math.floor(np.amin(self.points[:, 0])) - padding)
@@ -188,7 +195,12 @@ class WormMask:
                 self.distances = np.full((1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
             else:
                 # 2. Some points are really close together, so we can filter some of them out for speed.
-                self.points = filter_out_close_points(self.points, point_interval=2)
+                if all_widths_accurate:
+                    point_interval = 2
+                else:
+                    point_interval = max(2.0, radius / 2)
+
+                self.points = filter_out_close_points(self.points, point_interval=point_interval)
 
                 # 3. Apply a circle mask at each point on the curve to the mask.
                 self.distances = np.full((width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)

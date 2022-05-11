@@ -204,13 +204,14 @@ class GeneticClewEvolution:
             std_worm_score = np.std(worm_scores)
             mean_worm_score = np.mean(worm_scores)
 
-            if changed_worms >= 1:
+            if changed_worms >= 2:
                 break
 
             # If no worms were changed, then add or remove worms.
             if min_worm_score < 0 and len(self.clew) > self.initial_clew_size:
                 self.remove_worst_worm(worm_scores)
                 changed_worms += 1
+                break  # Only remove 1 worm at a time.
             else:
                 self.add_new_random_worm()
                 changed_worms += 1
