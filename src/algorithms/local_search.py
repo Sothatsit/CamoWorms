@@ -24,6 +24,7 @@ def score_worm_isolated(worm: CamoWorm, mask: WormMask, outer_mask: WormMask) ->
     body_score += 0.11
     body_score *= clamp(mask.area, 1, 1000)**0.25
     body_score *= clamp(mask.area - 1000, 1, 1000)**0.15
+    body_score *= clamp(mask.area - 2000, 1, 1000)**0.1
     body_score -= 0.11
 
     # Promotes the regions outside the worm being dissimilar colour.
@@ -31,7 +32,7 @@ def score_worm_isolated(worm: CamoWorm, mask: WormMask, outer_mask: WormMask) ->
     edge_score *= max(1, outer_mask.area) ** 0.3
 
     # We bias the result as we want a score of 0 to represent an okay worm.
-    return -1 + 1.2 * body_score + 1.3 * edge_score
+    return -1 + 1.2 * body_score + 1.2 * edge_score
 
 
 def locally_optimise_worm(

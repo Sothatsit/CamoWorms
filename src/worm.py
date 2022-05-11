@@ -48,7 +48,7 @@ class CamoWorm:
         p0 = [self.x + dx + p0[0], self.y + dy + p0[1]]
         p2 = [self.x + dx + p2[0], self.y + dy + p2[1]]
         p1 = [self.x + dx + p1[0], self.y + dy + p1[1]]
-        self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
+        self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2], dtype=np.float32))
 
     def copy(self, *, x=None, y=None, r=None, theta=None, dr=None, dgamma=None, width=None, colour=None):
         """ Creates a copy of this worm with any defined properties overridden. """

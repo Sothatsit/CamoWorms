@@ -1,6 +1,7 @@
 import math
 from typing import Optional, Final
 
+import numba as numba
 import numpy as np
 
 from src import NpImage, NpImageDType
@@ -34,6 +35,14 @@ def filter_out_close_points(points, *, point_interval: float = 6):
     # 4. Fill in the point filter.
     curr_dist = 0.0
     for index in range(1, n_points):
+        dist = distances[index - 1]
+        # If two points are the same, only one should be kept.
+        if dist == 0:
+            if index > 1 and point_filter[index - 1]:
+                point_filter[index - 1] = False
+                point_filter[index] = True
+            continue
+
         curr_dist += distances[index - 1]
         if curr_dist >= point_interval:
             point_filter[index] = True
@@ -67,34 +76,30 @@ class CircleMask:
         # Pixel-by-pixel distances.
         self.distances = xx**2 + yy**2
 
-    def _get_overlapping_areas(self, target_distances: NpImage, x: float, y: float):
+    def _get_overlapping_areas(self, target_distances: NpImage, x: int, y: int):
         """
         Returns a tuple of (target area, source area).
         """
-        # We don't care that much about sub-pixel accuracy.
-        x = round(x)
-        y = round(y)
-
         # Calculate the bounds in the target mask to paste the circle.
-        target_from_x = max(0, x + self.offset_x)
-        target_from_y = max(0, y + self.offset_y)
-        target_to_x = min(target_distances.shape[0] - 1, x + self.offset_x + self.width)
-        target_to_y = min(target_distances.shape[1] - 1, y + self.offset_y + self.width)
+        target_from_x: int = max(0, x + self.offset_x)
+        target_from_y: int = max(0, y + self.offset_y)
+        target_to_x: int = min(target_distances.shape[0] - 1, x + self.offset_x + self.width)
+        target_to_y: int = min(target_distances.shape[1] - 1, y + self.offset_y + self.width)
         if target_from_x >= target_to_x or target_from_y >= target_to_y:
             return None, None
 
         # Calculate the bounds in the circle mask to paste.
-        circle_from_x = target_from_x - x - self.offset_x
-        circle_from_y = target_from_y - y - self.offset_y
-        circle_to_x = target_to_x - x - self.offset_x
-        circle_to_y = target_to_y - y - self.offset_y
+        circle_from_x: int = target_from_x - x - self.offset_x
+        circle_from_y: int = target_from_y - y - self.offset_y
+        circle_to_x: int = target_to_x - x - self.offset_x
+        circle_to_y: int = target_to_y - y - self.offset_y
 
         # Add the circle mask into the target mask.
         target_area = target_distances[target_from_x:target_to_x, target_from_y:target_to_y]
         source_area = self.distances[circle_from_x:circle_to_x, circle_from_y:circle_to_y]
         return target_area, source_area
 
-    def apply(self, target_distances: NpImage, x: float, y: float):
+    def apply(self, target_distances: NpImage, x: int, y: int):
         """
         Draws this circle into the target distance image with its center at (x, y).
         """
@@ -104,7 +109,7 @@ class CircleMask:
 
         np.minimum(target_area, source_area, out=target_area)
 
-    def remove_from_mask(self, target_mask: NpImage, x: float, y: float):
+    def remove_from_mask(self, target_mask: NpImage, x: int, y: int):
         """
         Erases this circle from the target mask with its center at (x, y).
         """
@@ -123,7 +128,7 @@ class CircleMask:
         Tries to find a cached circle that is close in size to radius.
         If one can not be found, it creates it.
         """
-        # Quantize the radius into 0.5 pixel steps.
+        # Quantize the radius into steps.
         quantized = round(radius * quantize_accuracy)
 
         # Find if we have cached a circle already.
@@ -169,6 +174,7 @@ class WormMask:
             self.max_y = copy.max_y
             self.width = copy.width
             self.height = copy.height
+            self.points = copy.points
             self.distances = copy.distances
             self.mask = copy.mask
             self.area = copy.area
@@ -177,14 +183,20 @@ class WormMask:
             img_width, img_height = image.shape
             radius = worm.width / 2 + 0.5
             n_points_estimate = math.ceil(1.5 * worm.r + 1.5 * abs(worm.dr))
-            self.points = worm.bezier(np.linspace(0, 1, num=n_points_estimate))
+
+            raw_points = worm.bezier(np.linspace(0, 1, num=n_points_estimate))
+            if np.isnan(raw_points).any():
+                raise Exception("NaN in points")
+            self.points = raw_points.astype(np.int32)
+            px = self.points[:, 1]
+            py = self.points[:, 0]
 
             # The padding is needed for the radius of the circle and the outer mask calculation.
-            padding = math.ceil(radius * 1.5) + WormMask.OUTER_MAX_DIST
-            self.min_x = max(0, math.floor(np.amin(self.points[:, 1])) - padding)
-            self.min_y = max(0, math.floor(np.amin(self.points[:, 0])) - padding)
-            max_x = min(img_width, math.ceil(np.amax(self.points[:, 1])) + padding)
-            max_y = min(img_height, math.ceil(np.amax(self.points[:, 0])) + padding)
+            padding: int = math.ceil(radius * 1.5) + WormMask.OUTER_MAX_DIST
+            self.min_x = max(0, np.amin(px) - padding)
+            self.min_y = max(0, np.amin(py) - padding)
+            max_x = min(img_width, np.amax(px) + padding)
+            max_y = min(img_height, np.amax(py) + padding)
             width = max_x - self.min_x
             height = max_y - self.min_y
 
@@ -192,6 +204,7 @@ class WormMask:
             if width <= 0 or height <= 0:
                 self.min_x = 0
                 self.min_y = 0
+                self.points = self.points[0:1].copy()
                 self.distances = np.full((1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
             else:
                 # 2. Some points are really close together, so we can filter some of them out for speed.
@@ -214,6 +227,10 @@ class WormMask:
             self.max_x = self.min_x + self.width
             self.max_y = self.min_y + self.height
 
+        self._image_within_bounds: Optional[NpImage] = None
+        self._image_under_mask: Optional[NpImage] = None
+        self._difference_image: Optional[NpImage] = None
+
     @property
     def radius(self) -> float:
         return self.worm.width / 2.0
@@ -226,6 +243,11 @@ class WormMask:
         """ Re-calculates the mask based upon the worm associated with this mask. """
         self.mask = self.distances < self.radius**2
         self.area = int(np.sum(self.mask))
+
+        # Reset all the cached images generated using this mask.
+        self._image_within_bounds: Optional[NpImage] = None
+        self._image_under_mask: Optional[NpImage] = None
+        self._difference_image: Optional[NpImage] = None
 
     def create_outer_mask(self, *, dest: 'WormMask' = None) -> 'WormMask':
         """
@@ -260,7 +282,7 @@ class WormMask:
 
             # Draw black circles around the points.
             for y, x in [pt_1, pt_2, pt_3]:
-                circle_mask.remove_from_mask(dest.mask, x - self.min_x, y - self.min_y)
+                circle_mask.remove_from_mask(dest.mask, round(x - self.min_x), round(y - self.min_y))
 
         return dest
 
@@ -282,18 +304,34 @@ class WormMask:
         Returns the image under the mask with the pixels
         not within the mask being marked as 0.
         """
+        do_cache = image is None or image is self.image
+        if do_cache and self._image_within_bounds is not None:
+            return self._image_within_bounds
+
         image = self.image if image is None else image
 
         # Get the subset of the image corresponding to this mask.
-        return image[self.min_x:self.max_x, self.min_y:self.max_y] / 255.0
+        result = image[self.min_x:self.max_x, self.min_y:self.max_y] / 255.0
+
+        if do_cache:
+            self._image_within_bounds = result
+        return result
 
     def image_under_mask(self, image=None):
         """
         Returns the image under the mask with the pixels
         not within the mask being marked as 0.
         """
+        do_cache = image is None or image is self.image
+        if do_cache and self._image_under_mask is not None:
+            return self._image_under_mask
+
         # Apply the mask to the image.
-        return self.image_within_bounds(image) * self.mask
+        result = self.image_within_bounds(image) * self.mask
+
+        # if do_cache:
+        #     self._image_under_mask = result
+        return result
 
     def difference_image(self, image=None):
         """
@@ -301,10 +339,12 @@ class WormMask:
         between the colour of the worm and all the pixels beneath the worm.
         """
         # 1. Calculate the difference of the colour of the worm to its background.
-        diff_image = np.absolute(self.image_under_mask(image) - self.worm.colour)
+        diff_image = self.image_under_mask(image) - self.worm.colour
+        np.absolute(diff_image, out=diff_image)
 
         # 2. Apply the mask to the difference.
-        return diff_image * self.mask
+        diff_image *= self.mask
+        return diff_image
 
     def mean_colour(self, image=None):
         """
@@ -331,7 +371,7 @@ class WormMask:
         median_index = math.floor((first_index + len(colours) - 1) / 2.0)
         return colours[median_index] - 1
 
-    def subsection(self, min_x, min_y, max_x, max_y):
+    def subsection(self, min_x: int, min_y: int, max_x: int, max_y: int):
         """
         Gets the subsection of this mask that covers the given coordinates.
         """
@@ -358,7 +398,7 @@ class WormMask:
             return 0
 
         sub_other = other.subsection(self.min_x, self.min_y, self.max_x, self.max_y)
-        return sub_self.ravel().dot(sub_other.ravel()) / max(1, self.area)
+        return np.sum(np.logical_and(sub_self, sub_other)) / max(1, self.area)
 
     def midpoint_distance_squared(self, other: 'WormMask'):
         """

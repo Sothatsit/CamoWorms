@@ -190,7 +190,7 @@ class GeneticClewEvolution:
         for i in range(test_worms):
             new_worm = CamoWorm.random(self.image.shape)
             new_worm_mask = WormMask(new_worm, self.image)
-            new_worm.colour = new_worm_mask.median_colour()
+            new_worm.colour = new_worm_mask.mean_colour()
             new_worm_score = self.score(new_worm, new_worm_mask)
             if best_worm is None or new_worm_score > best_worm_score:
                 best_worm = new_worm

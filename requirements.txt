@@ -6,4 +6,3 @@ imageio~=2.9.0
 scipy~=1.7.3
 pygifsicle~=1.0.5
 opencv~=4.5.4
-imageio~=2.9.0
