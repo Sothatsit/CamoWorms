@@ -21,7 +21,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
     def __init__(self, image, clew_size: int):
         super().__init__(edge_enhance(image), clew_size, name="Greedy")
 
-    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap=0.05):
+    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap=1):
         """ A basic benchmark scoring function. """
         score = 100 * score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
 
@@ -29,25 +29,26 @@ class GreedyClewEvolution(GeneticClewEvolution):
         score += 0.15 * (1 if score > 0 else -1) * (worm.r + 2 * worm.width)
 
         # Attempts to avoid overlapping and close worms.
-        close_penalty = 0.0
-        overlap_penalty = 0.0
-        for other_index in range(len(self.clew)):
-            other_worm = self.clew[other_index]
-            if worm is other_worm:
-                continue
+        avoid_close = score < 0
+        avoid_overlap = allowed_overlap < 1
+        if avoid_close and avoid_overlap:
+            close_penalty = 0.0
+            overlap_penalty = 0.0
+            for other_index in range(len(self.clew)):
+                other_worm = self.clew[other_index]
+                if worm is other_worm:
+                    continue
 
-            other_worm_mask = self.clew_masks[other_index]
-            if score < 0:
-                close_penalty += max(0.0, 2000 - worm_mask.midpoint_distance_squared(other_worm_mask))
+                other_worm_mask = self.clew_masks[other_index]
+                if avoid_close:
+                    close_penalty += max(0.0, 2000 - worm_mask.midpoint_distance_squared(other_worm_mask))
 
-            intersection = worm_mask.intersection(other_worm_mask)
-            overlap_penalty += max(0.0, intersection - allowed_overlap) / (1 - allowed_overlap)
+                if avoid_overlap:
+                    intersection = worm_mask.intersection(other_worm_mask)
+                    overlap_penalty += max(0.0, intersection - allowed_overlap) / (1 - allowed_overlap)
 
-        # Stop bad worms from all reaching the same bad solutions.
-        if score < 0:
             score -= 0.1 * close_penalty
-
-        score -= max(2 * score, 50) * overlap_penalty
+            score -= max(2 * score, 50) * overlap_penalty
 
         return 0.5 * score
 

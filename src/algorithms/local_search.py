@@ -28,7 +28,10 @@ def score_worm_isolated(worm: CamoWorm, mask: WormMask, outer_mask: WormMask) ->
 
     # Promotes the regions outside the worm being dissimilar colour.
     edge_score = np.sum(outer_mask.difference_image()) / max(1, outer_mask.area)
+
+    edge_score -= 0.025
     edge_score *= max(1, outer_mask.area) ** 0.3
+    edge_score += 0.025
 
     # We bias the result as we want a score of 0 to represent an okay worm.
     return -1 + 1.2 * body_score + 1.3 * edge_score

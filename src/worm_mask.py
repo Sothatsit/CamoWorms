@@ -358,7 +358,7 @@ class WormMask:
             return 0
 
         sub_other = other.subsection(self.min_x, self.min_y, self.max_x, self.max_y)
-        return sub_self.ravel().dot(sub_other.ravel()) / max(1, self.area)
+        return np.sum(np.logical_and(sub_self, sub_other)) / max(1, self.area)
 
     def midpoint_distance_squared(self, other: 'WormMask'):
         """
