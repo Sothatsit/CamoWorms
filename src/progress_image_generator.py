@@ -22,7 +22,6 @@ def build_gif(frame_directory_path: str, destination: str) -> None:
 
     with imageio.get_writer(destination, mode="I") as writer:
         for frame_file in frame_files:
-            print(frame_file)
             frame = imageio.imread(frame_file)
 
             # Crop to interesting part of frame
@@ -60,6 +59,10 @@ class ProgressImageGenerator:
 
         create_and_empty_directory(self.__progress_dir)
 
+    def generate_gif(self):
+        """ Generates a gif with the same name as the progress directory. """
+        build_gif(self.__progress_dir, f"{self.__progress_dir}.gif")
+
     def save_progress_image(self, clew: Clew, worm_masks: list[WormMask], generation_num: int) -> None:
         """ Saves a progress image of the clew. """
 
@@ -71,7 +74,8 @@ class ProgressImageGenerator:
         drawing = Drawing(image)
 
         file_path = os.path.join(
-            self.__progress_dir, f"gen-{generation_num:06}.png")
+            self.__progress_dir, f"gen-{generation_num:06}.png"
+        )
         drawing.plot(
             title=f"{self.__run_title} gen-{generation_num:06}",
             save=file_path,

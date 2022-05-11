@@ -8,3 +8,8 @@ def clamp(num: float, minimum: float, maximum: float) -> float:
     if num > maximum:
         return maximum
     return num
+
+
+def round_to(value: float, incr: float) -> float:
+    """ Rounds value to the nearest inc. """
+    return incr * round(value / incr)

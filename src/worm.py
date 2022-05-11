@@ -12,6 +12,7 @@ import matplotlib.bezier as mbezier
 from sklearn.metrics.pairwise import euclidean_distances
 
 from src import rng
+from src.helpers import round_to
 
 
 class CamoWorm:
@@ -22,28 +23,31 @@ class CamoWorm:
             self, x: float, y: float, r: float, theta: float, deviation_r: float,
             deviation_gamma: float, width: float, colour: float):
 
-        self.x = x
-        self.y = y
-        self.r = r
-        self.theta = theta
-        self.dr = deviation_r
-        self.dgamma = deviation_gamma
-        self.width = width
-        self.colour = colour
+        self.x: float = round_to(x, 0.5)
+        self.y: float = round_to(y, 0.5)
+        self.r: float = round_to(r, 0.5)
+        self.theta: float = round_to(theta, 0.005)
+        self.dr: float = round_to(deviation_r, 0.5)
+        self.dgamma: float = round_to(deviation_gamma, 0.005)
+        self.width: float = round_to(width, 0.5)
+        self.colour: float = round_to(colour, 1/256)
 
         e_dr = abs(self.dr)
         e_theta = self.theta + (math.pi if self.dr < 0 else 0)
 
-        dx = -0.1 * self.r * np.cos(e_theta)
-        dy = -0.1 * self.r * np.sin(e_theta)
+        # Calculate the point offsets.
+        p0 = [-self.r * np.cos(e_theta), -self.r * np.sin(e_theta)]
+        p2 = [self.r * np.cos(e_theta), self.r * np.sin(e_theta)]
+        p1 = [e_dr * np.cos(e_theta + self.dgamma), e_dr * np.sin(e_theta + self.dgamma)]
+        bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
 
-        p0 = [self.x + dx - self.r * np.cos(e_theta),
-              self.y + dy - self.r * np.sin(e_theta)]
-        p2 = [self.x + dx + self.r * np.cos(e_theta),
-              self.y + dy + self.r * np.sin(e_theta)]
-        p1 = [self.x + dx + e_dr * np.cos(e_theta+self.dgamma),
-              self.y + dy + e_dr * np.sin(e_theta+self.dgamma)]
+        # Center x/y half-way through the curve.
+        dx, dy = -bezier(0.5)
 
+        # Shift the curve to the x/y point.
+        p0 = [self.x + dx + p0[0], self.y + dy + p0[1]]
+        p2 = [self.x + dx + p2[0], self.y + dy + p2[1]]
+        p1 = [self.x + dx + p1[0], self.y + dy + p1[1]]
         self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
 
     def copy(self, *, x=None, y=None, r=None, theta=None, dr=None, dgamma=None, width=None, colour=None):
@@ -59,18 +63,30 @@ class CamoWorm:
             self.colour if colour is None else colour
         )
 
+    def __eq__(self, other):
+        if type(other) != type(self):
+            return False
+
+        return self.x == other.x and \
+            self.y == other.y and \
+            self.r == other.r and \
+            self.theta == other.theta and \
+            self.dr == other.dr and \
+            self.dgamma == other.dgamma and \
+            self.width == other.width and \
+            self.colour == other.colour
+
     @staticmethod
     def random(image_shape: Tuple[int, int]) -> 'CamoWorm':
         (ylim, xlim) = image_shape
         midx = xlim * rng.random()
         midy = ylim * rng.random()
         r = 10 + 10 * np.abs(rng.standard_normal())
-        theta = math.pi * rng.random()
+        theta = 2 * math.pi * rng.random()
         dr = 5 * rng.standard_normal()
-        dgamma = rng.random() * np.pi
         colour = rng.random()
-        width = 4 + 2 * rng.standard_gamma(1)
-        return CamoWorm(midx, midy, r, theta, dr, dgamma, width, colour)
+        width = 4 + 1.5 * rng.standard_gamma(1)
+        return CamoWorm(midx, midy, r, theta, dr, math.pi/2, width, colour)
 
     def control_points(self):
         return self.bezier.control_points

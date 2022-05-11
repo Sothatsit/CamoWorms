@@ -213,7 +213,7 @@ class WormMask:
     def recalculate_mask(self):
         """ Re-calculates the mask based upon the worm associated with this mask. """
         self.mask = self.distances < self.radius**2
-        self.area = np.sum(self.mask)
+        self.area = int(np.sum(self.mask))
 
     def create_outer_mask(self, *, dest: 'WormMask' = None) -> 'WormMask':
         """
@@ -325,7 +325,7 @@ class WormMask:
         """
         if max_x <= self.min_x or max_y <= self.min_y:
             return None
-        if min_x > self.max_x or min_y > self.max_y:
+        if min_x >= self.max_x or min_y >= self.max_y:
             return None
 
         min_x = max(self.min_x, min_x)
@@ -346,7 +346,7 @@ class WormMask:
             return 0
 
         sub_other = other.subsection(self.min_x, self.min_y, self.max_x, self.max_y)
-        return np.sum(np.minimum(sub_self, sub_other)) / max(1, self.area)
+        return sub_self.ravel().dot(sub_other.ravel()) / max(1, self.area)
 
     def midpoint_distance_squared(self, other: 'WormMask'):
         """
