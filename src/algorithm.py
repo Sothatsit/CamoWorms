@@ -3,6 +3,8 @@ This file contains a generic template that can be extended
 to implement genetic evolution algorithms to evolve a clew
 of camo worms.
 """
+import cProfile
+import pstats
 import time
 import numpy as np
 from typing import Tuple, Optional, Iterable
@@ -26,7 +28,11 @@ class GeneticClewEvolution:
 
     def __init__(
             self, image: NpImage, initial_clew_size: int,
-            *, name="Clew", evolve_clew_size: bool = True, progress_dir: Optional[str] = "progress"):
+            *,
+            name="Clew",
+            evolve_clew_size: bool = True,
+            progress_dir: Optional[str] = "progress",
+            profile_file: Optional[str] = "profile.prof"):
 
         self.name = name
         self.initial_clew_size = initial_clew_size
@@ -47,18 +53,35 @@ class GeneticClewEvolution:
         initial_ssim, _ = self.score_clew()
         self.generation_ssim_scores = [initial_ssim]
 
-        self.progress_image_generator = None
+        self.progress_image_generator: Optional[ProgressImageGenerator] = None
         if progress_dir is not None:
             self.progress_image_generator = ProgressImageGenerator(
                 np.full(image.shape, find_median_colour(image)), name, progress_dir)
             self.progress_image_generator.save_progress_image(
                 self.clew, self.clew_masks, self.generation)
 
+        self.profiler: Optional[cProfile.Profile] = None
+        self.profile_file = profile_file
+        if profile_file is not None:
+            self.profiler = cProfile.Profile()
+
     def generate_progress_gif(self):
         """
         Generates a progress gif from the frames that were saved.
         """
+        if self.progress_image_generator is None:
+            raise Exception("No progress images were saved")
         self.progress_image_generator.generate_gif()
+
+    def save_profiler_stats(self):
+        """
+        Saves the profiler stats that were recorded.
+        """
+        if self.profiler is None:
+            raise Exception("No profiling was performed")
+
+        stats = pstats.Stats(self.profiler).sort_stats(pstats.SortKey.TIME)
+        stats.dump_stats(filename=self.profile_file)
 
     def score(self, worm: CamoWorm, worm_mask: WormMask) -> float:
         """
@@ -121,12 +144,26 @@ class GeneticClewEvolution:
         drawing = Drawing(self.draw_clew(background))
         drawing.plot(title="{} gen-{}".format(self.name, self.generation))
 
-    def run_generations(self, generations):
+    def run_generation(self):
+        """
+        Runs a single generation of evolution.
+        """
+        self.run_generations(1)
+
+    def run_generations(self, generations: int):
         """
         Runs the given number of generations of evolution.
         """
-        for _ in range(generations):
-            self.run_generation()
+        if self.profiler is not None:
+            self.profiler.enable()
+
+        try:
+            for _ in range(generations):
+                self._run_generation()
+        finally:
+            if self.profiler is not None:
+                self.profiler.disable()
+                self.save_profiler_stats()
 
     def add_worm(self, worm: CamoWorm, worm_mask: Optional[WormMask] = None):
         """
@@ -173,7 +210,7 @@ class GeneticClewEvolution:
         self.clew_masks = [m for _, _, m in combined]
         return worm_scores
 
-    def run_generation(self):
+    def _run_generation(self):
         """
         Evolves a single generation.
         """

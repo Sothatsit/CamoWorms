@@ -176,7 +176,7 @@ class WormMask:
             # 1. Calculate some information about the worm
             img_width, img_height = image.shape
             radius = worm.width / 2 + 0.5
-            n_points_estimate = math.ceil(2 * worm.r + 2 * abs(worm.dr))
+            n_points_estimate = math.ceil(1.5 * worm.r + 1.5 * abs(worm.dr))
             self.points = worm.bezier(np.linspace(0, 1, num=n_points_estimate))
 
             # The padding is needed for the radius of the circle and the outer mask calculation.
