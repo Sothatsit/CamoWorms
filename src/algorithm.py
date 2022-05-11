@@ -50,7 +50,7 @@ class GeneticClewEvolution:
         self.progress_image_generator = None
         if progress_dir is not None:
             self.progress_image_generator = ProgressImageGenerator(
-                image, name, progress_dir)
+                np.full(image.shape, find_median_colour(image)), name, progress_dir)
             self.progress_image_generator.save_progress_image(
                 self.clew, self.clew_masks, self.generation)
 

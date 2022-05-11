@@ -54,8 +54,7 @@ class ProgressImageGenerator:
         self.__run_title = run_title
         self.__progress_dir = progress_dir
 
-        self.__base_median_colour = find_median_colour(base_image)
-        self.__base_image_shape = base_image.shape
+        self.__base_image = base_image.copy()
 
         create_and_empty_directory(self.__progress_dir)
 
@@ -66,7 +65,7 @@ class ProgressImageGenerator:
     def save_progress_image(self, clew: Clew, worm_masks: list[WormMask], generation_num: int) -> None:
         """ Saves a progress image of the clew. """
 
-        image = np.full(self.__base_image_shape, self.__base_median_colour)
+        image = self.__base_image.copy()
 
         for worm, mask in zip(clew, worm_masks):
             mask.draw_into(image, worm.colour * 255.0)
