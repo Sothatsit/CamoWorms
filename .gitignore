@@ -1,7 +1,13 @@
+__pycache__
+
 .DS_Store
 .ipynb_checkpoints/
 .idea
-__pycache__
+.vscode
+.devcontainer
+
 CamoWorms.ipynb
+
 progress
 progress.gif
+past_runs/
