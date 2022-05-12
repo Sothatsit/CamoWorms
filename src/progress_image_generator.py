@@ -1,9 +1,9 @@
 import os
 import imageio
 from pathlib import Path
+import numpy as np
 import pygifsicle
 from src import NpImage
-from src.plotting import Drawing
 from src.worm import Clew
 from src.worm_mask import WormMask
 
@@ -47,24 +47,23 @@ class ProgressImageGenerator:
     def __init__(self, base_image: NpImage, run_title: str, progress_dir: str):
         self.__run_title = run_title
         self.__progress_dir = progress_dir
-        self.__base_image = base_image
+
+        self.__base_image = base_image.copy()
 
         create_and_empty_directory(self.__progress_dir)
 
-    def generate_gif(self) -> None:
+    def generate_gif(self):
         """ Generates a gif with the same name as the progress directory. """
         build_gif(self.__progress_dir, f"{self.__progress_dir}.gif")
 
-    def save_progress_image(self, clew: Clew, generation_num: int) -> None:
+    def save_progress_image(self, clew: Clew, worm_masks: list[WormMask], generation_num: int) -> None:
         """ Saves a progress image of the clew. """
-        drawing = Drawing(self.__base_image)
-        drawing.add_worms(clew)
 
-        file_path = os.path.join(
+        image = self.__base_image.copy()
+
+        for worm, mask in zip(clew, worm_masks):
+            mask.draw_into(image, worm.colour * 255.0)
+
+        imageio.imwrite(os.path.join(
             self.__progress_dir, f"gen-{generation_num:06}.png"
-        )
-        drawing.plot(
-            title=f"{self.__run_title} gen-{generation_num:06}",
-            save=file_path,
-            do_show=False
-        )
+        ), image.astype(np.uint8))

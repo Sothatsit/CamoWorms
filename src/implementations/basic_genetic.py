@@ -116,9 +116,9 @@ def run_basic_genetic(image: NpImage, clew_size: int, number_of_clews: int, tota
 
         best_individual = algorithm_instance.population[0].underlying
         progress_image_generator.save_progress_image(
-            best_individual.clew, algorithm_instance.generation)
+            best_individual.clew, best_individual.worm_masks, algorithm_instance.generation)
         progress_image_generator_white.save_progress_image(
-            best_individual.clew, algorithm_instance.generation)
+            best_individual.clew, best_individual.worm_masks, algorithm_instance.generation)
 
     build_gif("./progress/match-bg/normal", "match-bg.gif")
     build_gif("./progress/match-bg/white", "match-bg-white.gif")
