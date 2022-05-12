@@ -3,7 +3,6 @@ import imageio
 from pathlib import Path
 import pygifsicle
 from src import NpImage
-from src.image_manipulation import find_median_colour
 from src.plotting import Drawing
 from src.worm import Clew
 from src.worm_mask import WormMask
@@ -56,7 +55,7 @@ class ProgressImageGenerator:
         """ Generates a gif with the same name as the progress directory. """
         build_gif(self.__progress_dir, f"{self.__progress_dir}.gif")
 
-    def save_progress_image(self, clew: Clew, worm_masks: list[WormMask], generation_num: int) -> None:
+    def save_progress_image(self, clew: Clew, generation_num: int) -> None:
         """ Saves a progress image of the clew. """
         drawing = Drawing(self.__base_image)
         drawing.add_worms(clew)

@@ -58,7 +58,7 @@ class GeneticClewEvolution:
             self.progress_image_generator = ProgressImageGenerator(
                 np.full(image.shape, find_median_colour(image)), name, progress_dir)
             self.progress_image_generator.save_progress_image(
-                self.clew, self.clew_masks, self.generation)
+                self.clew, self.generation)
 
         self.profiler: Optional[cProfile.Profile] = None
         self.profile_file = profile_file
@@ -258,7 +258,7 @@ class GeneticClewEvolution:
         # Save progress.
         if self.progress_image_generator is not None:
             self.progress_image_generator.save_progress_image(
-                self.clew, self.clew_masks, self.generation
+                self.clew, self.generation
             )
 
         duration = time.perf_counter() - start_time
