@@ -48,11 +48,12 @@ class ProgressImageGenerator:
         self.__progress_dir = progress_dir
         self.__base_image = base_image.copy()
 
-        create_and_empty_directory(self.__progress_dir)
+        create_and_empty_directory(f"{self.__progress_dir}/frames")
 
     def generate_gif(self) -> None:
         """ Generates a gif with the same name as the progress directory. """
-        build_gif(self.__progress_dir, f"{self.__progress_dir}.gif")
+        build_gif(f"{self.__progress_dir}/frames",
+                  f"{self.__progress_dir}/animation.gif")
 
     def save_progress_image(self, clew: Clew, worm_masks: list[WormMask], generation_num: int) -> None:
         """ Saves a progress image of the clew. """
@@ -65,5 +66,5 @@ class ProgressImageGenerator:
         image = np.rot90(image, 2)
 
         imageio.imwrite(os.path.join(
-            self.__progress_dir, f"gen-{generation_num:06}.png"
+            self.__progress_dir, "frames", f"gen-{generation_num:06}.png"
         ), image.astype(np.uint8))
