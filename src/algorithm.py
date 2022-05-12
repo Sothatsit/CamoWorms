@@ -29,7 +29,7 @@ class GeneticClewEvolution:
     def __init__(
             self, image: NpImage, initial_clew_size: int,
             *,
-            name="Clew",
+            name: str = "Clew",
             evolve_clew_size: bool = True,
             progress_dir: Optional[str] = "progress",
             profile_file: Optional[str] = "profile.prof"):
@@ -65,7 +65,7 @@ class GeneticClewEvolution:
         if profile_file is not None:
             self.profiler = cProfile.Profile()
 
-    def generate_progress_gif(self):
+    def generate_progress_gif(self) -> None:
         """
         Generates a progress gif from the frames that were saved.
         """
@@ -169,7 +169,8 @@ class GeneticClewEvolution:
         """
         Adds a new worm to the clew that is being evolved.
         """
-        worm_mask = WormMask(worm, self.image) if worm_mask is None else worm_mask
+        worm_mask = WormMask(
+            worm, self.image) if worm_mask is None else worm_mask
         self.clew.append(worm)
         self.clew_masks.append(worm_mask)
 
@@ -191,7 +192,8 @@ class GeneticClewEvolution:
             new_worm = CamoWorm.random(self.image.shape)
             new_worm_mask = WormMask(new_worm, self.image)
             new_worm.colour = new_worm_mask.mean_colour()
-            new_worm_score = self.score(new_worm, new_worm_mask, for_new_worm=True)
+            new_worm_score = self.score(
+                new_worm, new_worm_mask, for_new_worm=True)
             if best_worm is None or new_worm_score > best_worm_score:
                 best_worm = new_worm
                 best_worm_score = new_worm_score

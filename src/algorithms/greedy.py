@@ -4,7 +4,7 @@ This file implements a greedy genetic algorithm to evolve a clew of worms.
 import math
 from typing import Tuple, Optional
 
-from src import rng
+from src import NpImage, rng
 from src.algorithm import GeneticClewEvolution
 from src.algorithms.local_search import score_worm_isolated
 from src.helpers import clamp
@@ -18,12 +18,20 @@ class GreedyClewEvolution(GeneticClewEvolution):
     This greedy algorithm makes random mutations to the worms in the clew
     and only keeps mutations that improve the score of the worm.
     """
-    def __init__(self, image, clew_size: int):
-        super().__init__(edge_enhance(image), clew_size, name="Greedy")
+
+    def __init__(self, image: NpImage, inital_clew_size: int,
+                 *,
+                 name: str = "Greedy",
+                 evolve_clew_size: bool = True,
+                 progress_dir: Optional[str] = "progress",
+                 profile_file: Optional[str] = "profile.prof"):
+        super().__init__(edge_enhance(image), inital_clew_size, name=name,
+                         evolve_clew_size=evolve_clew_size, progress_dir=progress_dir, profile_file=profile_file)
 
     def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap=0.5, for_new_worm=False):
         """ A basic benchmark scoring function. """
-        score = 100 * score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
+        score = 100 * \
+            score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
 
         # Promotes bigger worms if the worms are already decent.
         score += 0.15 * (1 if score > 0 else -1) * (worm.r + 2 * worm.width)
@@ -41,11 +49,13 @@ class GreedyClewEvolution(GeneticClewEvolution):
 
                 other_worm_mask = self.clew_masks[other_index]
                 if avoid_close:
-                    close_penalty += max(0.0, 2000 - worm_mask.midpoint_distance_squared(other_worm_mask))
+                    close_penalty += max(0.0, 2000 -
+                                         worm_mask.midpoint_distance_squared(other_worm_mask))
 
                 if avoid_overlap:
                     intersection = worm_mask.intersection(other_worm_mask)
-                    overlap_penalty += max(0.0, intersection - allowed_overlap) / (1 - allowed_overlap)
+                    overlap_penalty += max(0.0, intersection -
+                                           allowed_overlap) / (1 - allowed_overlap)
 
             score -= 0.1 * close_penalty
             score -= 50 * overlap_penalty

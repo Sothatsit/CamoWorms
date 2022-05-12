@@ -1,7 +1,6 @@
 import os
 import imageio
 from pathlib import Path
-import numpy as np
 import pygifsicle
 from src import NpImage
 from src.image_manipulation import find_median_colour
@@ -53,7 +52,7 @@ class ProgressImageGenerator:
 
         create_and_empty_directory(self.__progress_dir)
 
-    def generate_gif(self):
+    def generate_gif(self) -> None:
         """ Generates a gif with the same name as the progress directory. """
         build_gif(self.__progress_dir, f"{self.__progress_dir}.gif")
 
