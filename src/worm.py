@@ -2,10 +2,12 @@
 This file contains the class we use to represent all worms.
 The worms are represented by a simple bezier curve.
 """
+from __future__ import annotations
 import math
-from typing import Tuple, TypeAlias
+from typing import Optional, Tuple, TypeAlias, cast
 
 import numpy as np
+import numpy.typing as npt
 import matplotlib.path as mpath
 import matplotlib.patches as mpatches
 import matplotlib.bezier as mbezier
@@ -19,6 +21,7 @@ class CamoWorm:
     """
     A worm.
     """
+
     def __init__(
             self, x: float, y: float, r: float, theta: float, deviation_r: float,
             deviation_gamma: float, width: float, colour: float):
@@ -38,7 +41,8 @@ class CamoWorm:
         # Calculate the point offsets.
         p0 = [-self.r * np.cos(e_theta), -self.r * np.sin(e_theta)]
         p2 = [self.r * np.cos(e_theta), self.r * np.sin(e_theta)]
-        p1 = [e_dr * np.cos(e_theta + self.dgamma), e_dr * np.sin(e_theta + self.dgamma)]
+        p1 = [e_dr * np.cos(e_theta + self.dgamma), e_dr *
+              np.sin(e_theta + self.dgamma)]
         bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
 
         # Center x/y half-way through the curve.
@@ -48,9 +52,11 @@ class CamoWorm:
         p0 = [self.x + dx + p0[0], self.y + dy + p0[1]]
         p2 = [self.x + dx + p2[0], self.y + dy + p2[1]]
         p1 = [self.x + dx + p1[0], self.y + dy + p1[1]]
-        self.bezier = mbezier.BezierSegment(np.array([p0, p1, p2]))
+        self.bezier: mbezier.BezierSegment = mbezier.BezierSegment(
+            np.array([p0, p1, p2]))
 
-    def copy(self, *, x=None, y=None, r=None, theta=None, dr=None, dgamma=None, width=None, colour=None):
+    def copy(self, *, x: Optional[float], y: Optional[float], r: Optional[float], theta: Optional[float], dr: Optional[float],
+             dgamma: Optional[float], width: Optional[float], colour: Optional[float]) -> CamoWorm:
         """ Creates a copy of this worm with any defined properties overridden. """
         return CamoWorm(
             self.x if x is None else x,
@@ -63,8 +69,8 @@ class CamoWorm:
             self.colour if colour is None else colour
         )
 
-    def __eq__(self, other):
-        if type(other) != type(self):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CamoWorm):
             return False
 
         return self.x == other.x and \
@@ -77,7 +83,7 @@ class CamoWorm:
             self.colour == other.colour
 
     @staticmethod
-    def random(image_shape: Tuple[int, int]) -> 'CamoWorm':
+    def random(image_shape: Tuple[int, int]) -> CamoWorm:
         (ylim, xlim) = image_shape
         midx = xlim * rng.random()
         midy = ylim * rng.random()
@@ -88,23 +94,33 @@ class CamoWorm:
         width = 4 + 1.5 * rng.standard_gamma(1)
         return CamoWorm(midx, midy, r, theta, dr, math.pi/2, width, colour)
 
-    def control_points(self):
-        return self.bezier.control_points
+    def control_points(self) -> npt.NDArray[np.float64]:
+        return cast(npt.NDArray[np.float64], self.bezier.control_points)
 
-    def path(self):
+    def path(self) -> mpath.Path:
         return mpath.Path(self.control_points(), [mpath.Path.MOVETO, mpath.Path.CURVE3, mpath.Path.CURVE3])
 
-    def patch(self):
+    def patch(self) -> mpatches.PathPatch:
         return mpatches.PathPatch(self.path(), fc='None', ec=str(self.colour), lw=self.width/2, capstyle='round')
 
-    def intermediate_points(self, intervals: int = None):
+    def __str__(self) -> str:
+        return "CamoWorm({:.0f}, {:.0f}, {:.0f}, {:.2f}, {:.0f}, {:.2f}, {:.1f}, {:.2f})".format(
+            self.x, self.y,
+            self.r, self.theta,
+            self.dr, self.dgamma,
+            self.width, self.colour
+        )
+
+    # These do not appear to be used anywhere
+    def intermediate_points(self, intervals: Optional[int] = None) -> Tuple[list[float], ...]:
         if intervals is None:
             intervals = max(3, int(np.ceil(self.r/8)))
         return self.bezier.point_at_t(np.linspace(0, 1, intervals))
 
-    def approx_length(self):
+    def approx_length(self) -> float:
         intermediates = self.intermediate_points()
-        eds = euclidean_distances(intermediates, intermediates)
+        eds = euclidean_distances(
+            intermediates, intermediates)
         return np.sum(np.diag(eds, 1))
 
     def colour_at_t(self, t, image):
@@ -112,14 +128,6 @@ class CamoWorm:
             np.array(self.bezier.point_at_t(t)).reshape(-1, 2)).astype(np.int64)
         colours = [image[point[0], point[1]] for point in intermediates]
         return np.array(colours) / 255.0
-
-    def __str__(self):
-        return "CamoWorm({:.0f}, {:.0f}, {:.0f}, {:.2f}, {:.0f}, {:.2f}, {:.1f}, {:.2f})".format(
-            self.x, self.y,
-            self.r, self.theta,
-            self.dr, self.dgamma,
-            self.width, self.colour
-        )
 
 
 Clew: TypeAlias = list[CamoWorm]

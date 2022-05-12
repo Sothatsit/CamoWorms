@@ -9,7 +9,7 @@ from src.algorithm import GeneticClewEvolution
 from src.algorithms.local_search import score_worm_isolated
 from src.helpers import clamp
 from src.image_manipulation import edge_enhance
-from src.worm import CamoWorm, Clew
+from src.worm import CamoWorm
 from src.worm_mask import WormMask
 
 
@@ -28,7 +28,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
         super().__init__(edge_enhance(image), inital_clew_size, name=name,
                          evolve_clew_size=evolve_clew_size, progress_dir=progress_dir, profile_file=profile_file)
 
-    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap=0.5, for_new_worm=False):
+    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap: float = 0.5, for_new_worm: bool = False) -> float:
         """ A basic benchmark scoring function. """
         score = 100 * \
             score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
@@ -62,12 +62,13 @@ class GreedyClewEvolution(GeneticClewEvolution):
 
         return 0.5 * score
 
-    def _random_mutate(self, worm: CamoWorm, score: float, *, min_temp=0.2, drastic_chance=0.1) -> CamoWorm:
+    def _random_mutate(self, worm: CamoWorm, score: float, *, min_temp: float = 0.2, drastic_chance: float = 0.1) -> CamoWorm:
         # We make bigger mutations to worms with lower scores.
         temp = min_temp + (1 - min_temp) * clamp(1 - score / 100, 0, 1)
         if rng.random() < drastic_chance:
             temp = 1
-        temp = min_temp + (1 - min_temp) * ((temp - min_temp) / (1 - min_temp))**2
+        temp = min_temp + (1 - min_temp) * \
+            ((temp - min_temp) / (1 - min_temp))**2
 
         # When the score is good, we grow the worm more often.
         # When the score is bad, we shrink the worm more often.
@@ -115,9 +116,9 @@ class GreedyClewEvolution(GeneticClewEvolution):
         )
         return new_worm
 
-    def random_mutate(self, worm: CamoWorm, score: float, **kwargs) -> Optional[CamoWorm]:
+    def random_mutate(self, worm: CamoWorm, score: float, **kwargs: dict[str, float]) -> Optional[CamoWorm]:
         """ Repeatedly mutates the given worm until a new worm is mutated. """
-        for i in range(100):
+        for _ in range(100):
             new_worm = self._random_mutate(worm, score, **kwargs)
             if new_worm != worm:
                 return new_worm

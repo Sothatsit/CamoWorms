@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import cast
 
 import numpy as np
+import numpy.typing as npt
 from src import NpImage, rng
 from src.algorithms.basic_ga import BasicGeneticAlgorithm
 from src.helpers import clamp

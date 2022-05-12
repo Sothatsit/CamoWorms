@@ -24,10 +24,12 @@ def filter_out_close_points(points, *, point_interval: float = 6):
 
     # 2. Adjust point_interval to evenly space the points.
     total_distance = np.sum(distances)
-    point_interval = total_distance / math.ceil(total_distance / point_interval)
+    point_interval = total_distance / \
+        math.ceil(total_distance / point_interval)
 
     # 3. Create an array to use as a filter for the points.
-    point_filter = np.zeros(n_points, dtype=bool)  # An array of which points to keep.
+    # An array of which points to keep.
+    point_filter = np.zeros(n_points, dtype=bool)
     point_filter[0] = True  # The first and last points should always be kept.
     point_filter[n_points - 1] = True
 
@@ -70,7 +72,7 @@ class CircleMask:
         self.mask = self.distances < self.radius ** 2
         self.inverse_mask = np.logical_not(self.mask)
 
-    def get_many_overlapping_areas(self, target: np.ndarray, points: np.ndarray) -> np.ndarray:
+    def get_many_overlapping_areas(self, target: NpImage, points: NpImage) -> NpImage:
         """
         Returns an array of overlapping areas of shape (N, 4, 2).
         The 2 represents x/y.
@@ -83,10 +85,12 @@ class CircleMask:
         target_from = points + self.offset_xy
         target_to = target_from + self.width
         np.maximum(target_from, 0, out=target_from)
-        np.minimum(target_to, np.array(target.shape, dtype=np.int), out=target_to)
+        np.minimum(target_to, np.array(
+            target.shape, dtype=np.int), out=target_to)
 
         # Filter out areas with no overlap.
-        overlap_condition = (target_from < target_to).all(axis=1, keepdims=False)
+        overlap_condition = (target_from < target_to).all(
+            axis=1, keepdims=False)
         if not np.all(overlap_condition):
             overlap_filter = np.asarray(overlap_condition).nonzero()
             points = points[overlap_filter]
@@ -113,8 +117,10 @@ class CircleMask:
         for (target_from_x, target_from_y), (target_to_x, target_to_y),  \
                 (circle_from_x, circle_from_y), (circle_to_x, circle_to_y) in areas:
 
-            target_area = target_distances[target_from_x:target_to_x, target_from_y:target_to_y]
-            source_area = self.distances[circle_from_x:circle_to_x, circle_from_y:circle_to_y]
+            target_area = target_distances[target_from_x:target_to_x,
+                                           target_from_y:target_to_y]
+            source_area = self.distances[circle_from_x:circle_to_x,
+                                         circle_from_y:circle_to_y]
             np.minimum(target_area, source_area, out=target_area)
 
     def remove_many_from_mask(self, target_mask: np.ndarray, points: np.ndarray):
@@ -123,8 +129,10 @@ class CircleMask:
         for (target_from_x, target_from_y), (target_to_x, target_to_y),  \
                 (circle_from_x, circle_from_y), (circle_to_x, circle_to_y) in areas:
 
-            target_area = target_mask[target_from_x:target_to_x, target_from_y:target_to_y]
-            source_area = self.inverse_mask[circle_from_x:circle_to_x, circle_from_y:circle_to_y]
+            target_area = target_mask[target_from_x:target_to_x,
+                                      target_from_y:target_to_y]
+            source_area = self.inverse_mask[circle_from_x:circle_to_x,
+                                            circle_from_y:circle_to_y]
             np.logical_and(target_area, source_area, out=target_area)
 
     @staticmethod
@@ -187,15 +195,20 @@ class WormMask:
             img_width, img_height = image.shape
             radius = worm.width / 2 + 1.5
             n_points_estimate = math.ceil(1.5 * worm.r + 1.5 * abs(worm.dr))
-            self.points = worm.bezier(np.linspace(0, 1, num=n_points_estimate))[:, ::-1]
+            self.points = worm.bezier(np.linspace(
+                0, 1, num=n_points_estimate))[:, ::-1]
             self.dense_points = self.points
 
             # The padding is needed for the radius of the circle and the outer mask calculation.
             padding = math.ceil(radius * 1.5) + WormMask.OUTER_MAX_DIST
-            self.min_x = max(0, math.floor(np.amin(self.points[:, 0])) - padding)
-            self.min_y = max(0, math.floor(np.amin(self.points[:, 1])) - padding)
-            max_x = min(img_width, math.ceil(np.amax(self.points[:, 0])) + padding)
-            max_y = min(img_height, math.ceil(np.amax(self.points[:, 1])) + padding)
+            self.min_x = max(0, math.floor(
+                np.amin(self.points[:, 0])) - padding)
+            self.min_y = max(0, math.floor(
+                np.amin(self.points[:, 1])) - padding)
+            max_x = min(img_width, math.ceil(
+                np.amax(self.points[:, 0])) + padding)
+            max_y = min(img_height, math.ceil(
+                np.amax(self.points[:, 1])) + padding)
             width = max_x - self.min_x
             height = max_y - self.min_y
 
@@ -204,7 +217,8 @@ class WormMask:
                 self.min_x = 0
                 self.min_y = 0
                 self.points = self.points[0:1]
-                self.distances = np.full((1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
+                self.distances = np.full(
+                    (1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
             else:
                 # 2. Some points are really close together, so we can filter some of them out for speed.
                 if all_widths_accurate:
@@ -212,13 +226,18 @@ class WormMask:
                 else:
                     point_interval = max(2.0, radius / 2)
 
-                self.points = filter_out_close_points(self.points, point_interval=point_interval)
+                self.points = filter_out_close_points(
+                    self.points, point_interval=point_interval)
 
                 # 3. Apply a circle mask at each point on the curve to the mask.
-                self.distances = np.full((width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)
-                circle_mask = CircleMask.get_cached(math.ceil(radius) + WormMask.OUTER_MAX_DIST)
-                mask_min_pt = np.array([self.min_x, self.min_y], dtype=self.points.dtype)
-                circle_mask.apply_many(self.distances, self.points - mask_min_pt)
+                self.distances = np.full(
+                    (width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)
+                circle_mask = CircleMask.get_cached(
+                    math.ceil(radius) + WormMask.OUTER_MAX_DIST)
+                mask_min_pt = np.array(
+                    [self.min_x, self.min_y], dtype=self.points.dtype)
+                circle_mask.apply_many(
+                    self.distances, self.points - mask_min_pt)
 
             self.recalculate_mask()
             self.width = self.mask.shape[0]
@@ -243,7 +262,8 @@ class WormMask:
         """
         Generates a mask encompassing the sides of this mask.
         """
-        distance = min(float(WormMask.OUTER_MAX_DIST), max(1.0, self.worm.width / 2.0))
+        distance = min(float(WormMask.OUTER_MAX_DIST),
+                       max(1.0, self.worm.width / 2.0))
 
         # Create the new mask.
         if dest is None:
@@ -275,8 +295,10 @@ class WormMask:
             remove_points.append(pt_3)
 
         # Draw black circles around the points.
-        mask_min_pt = np.array([self.min_x, self.min_y], dtype=self.points.dtype)
-        circle_mask.remove_many_from_mask(dest.mask, np.array(remove_points) - mask_min_pt)
+        mask_min_pt = np.array([self.min_x, self.min_y],
+                               dtype=self.points.dtype)
+        circle_mask.remove_many_from_mask(
+            dest.mask, np.array(remove_points) - mask_min_pt)
         return dest
 
     def draw_into(self, image, colour):
@@ -287,7 +309,8 @@ class WormMask:
         image_subsection = image[self.min_x:self.max_x, self.min_y:self.max_y]
 
         # 2. Black-out the area under the mask.
-        np.subtract(image_subsection, image_subsection * self.mask, image_subsection)
+        np.subtract(image_subsection, image_subsection *
+                    self.mask, image_subsection)
 
         # 3. Add in the colour for the masked area.
         np.add(image_subsection, colour * self.mask, image_subsection)
@@ -310,18 +333,19 @@ class WormMask:
         # Apply the mask to the image.
         return self.image_within_bounds(image) * self.mask
 
-    def difference_image(self, image=None):
+    def difference_image(self, image: Optional[NpImage] = None) -> NpImage:
         """
         This applies this mask to the image, to calculate the differences
         between the colour of the worm and all the pixels beneath the worm.
         """
         # 1. Calculate the difference of the colour of the worm to its background.
-        diff_image = np.absolute(self.image_under_mask(image) - self.worm.colour)
+        diff_image = np.absolute(
+            self.image_under_mask(image) - self.worm.colour)
 
         # 2. Apply the mask to the difference.
         return diff_image * self.mask
 
-    def mean_colour(self, image=None):
+    def mean_colour(self, image: Optional[NpImage] = None) -> Optional[float]:
         """
         Returns the mean colour of all pixels underneath this mask in the image.
         """
@@ -368,11 +392,13 @@ class WormMask:
         """
         Calculates the percentage of this mask's area that intersects with the other mask.
         """
-        sub_self = self.subsection(other.min_x, other.min_y, other.max_x, other.max_y)
+        sub_self = self.subsection(
+            other.min_x, other.min_y, other.max_x, other.max_y)
         if sub_self is None:
             return 0
 
-        sub_other = other.subsection(self.min_x, self.min_y, self.max_x, self.max_y)
+        sub_other = other.subsection(
+            self.min_x, self.min_y, self.max_x, self.max_y)
         return np.sum(np.logical_and(sub_self, sub_other)) / max(1, self.area)
 
     def midpoint_distance_squared(self, other: 'WormMask'):
