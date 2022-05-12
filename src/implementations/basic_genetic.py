@@ -96,9 +96,9 @@ def run_basic_genetic(image: NpImage, clew_size: int, number_of_clews: int, tota
         number_of_clews, match_background_cost, random_individual, crossover_function)
 
     progress_image_generator = ProgressImageGenerator(
-        image, "Match BG", "./progress/match-bg/normal")
+        image, "./progress/match-bg/normal")
     progress_image_generator_white = ProgressImageGenerator(
-        np.full(image.shape, 255.0), "Match BG", "./progress/match-bg/white")
+        np.full(image.shape, 255.0), "./progress/match-bg/white")
 
     current_error_delta = 1.0
     last_cost = float('inf')

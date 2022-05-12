@@ -301,7 +301,7 @@ class WormMask:
             dest.mask, np.array(remove_points) - mask_min_pt)
         return dest
 
-    def draw_into(self, image, colour):
+    def draw_into(self, image: NpImage, colour: float) -> None:
         """
         Draws this worm mask into the given image with the given colour.
         """

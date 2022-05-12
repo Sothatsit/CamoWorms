@@ -44,15 +44,13 @@ def create_and_empty_directory(directory_path: str) -> None:
 class ProgressImageGenerator:
     """ Used to save progress images of a clew """
 
-    def __init__(self, base_image: NpImage, run_title: str, progress_dir: str):
-        self.__run_title = run_title
+    def __init__(self, base_image: NpImage, progress_dir: str):
         self.__progress_dir = progress_dir
-
         self.__base_image = base_image.copy()
 
         create_and_empty_directory(self.__progress_dir)
 
-    def generate_gif(self):
+    def generate_gif(self) -> None:
         """ Generates a gif with the same name as the progress directory. """
         build_gif(self.__progress_dir, f"{self.__progress_dir}.gif")
 
@@ -63,6 +61,8 @@ class ProgressImageGenerator:
 
         for worm, mask in zip(clew, worm_masks):
             mask.draw_into(image, worm.colour * 255.0)
+
+        image = np.rot90(image, 2)
 
         imageio.imwrite(os.path.join(
             self.__progress_dir, f"gen-{generation_num:06}.png"
