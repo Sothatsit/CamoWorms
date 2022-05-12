@@ -116,7 +116,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
         )
         return new_worm
 
-    def random_mutate(self, worm: CamoWorm, score: float, **kwargs: dict[str, float]) -> Optional[CamoWorm]:
+    def random_mutate(self, worm: CamoWorm, score: float, **kwargs: float) -> Optional[CamoWorm]:
         """ Repeatedly mutates the given worm until a new worm is mutated. """
         for _ in range(100):
             new_worm = self._random_mutate(worm, score, **kwargs)
