@@ -245,6 +245,10 @@ class WormMask:
             self.max_x = self.min_x + self.width
             self.max_y = self.min_y + self.height
 
+        # Cached results.
+        self._image_within_bounds: Optional[NpImage] = None
+        self._image_under_mask: Optional[NpImage] = None
+
     @property
     def radius(self) -> float:
         return self.worm.width / 2.0
@@ -257,6 +261,9 @@ class WormMask:
         """ Re-calculates the mask based upon the worm associated with this mask. """
         self.mask = self.distances < self.radius**2
         self.area = int(np.sum(self.mask))
+
+        # Reset cached values that rely on the mask.
+        self._image_under_mask = None
 
     def create_outer_mask(self, *, dest: 'WormMask' = None) -> 'WormMask':
         """
@@ -315,23 +322,37 @@ class WormMask:
         # 3. Add in the colour for the masked area.
         np.add(image_subsection, colour * self.mask, image_subsection)
 
-    def image_within_bounds(self, image=None):
+    def image_within_bounds(self, image=None) -> NpImage:
         """
         Returns the image under the mask with the pixels
         not within the mask being marked as 0.
         """
+        do_cache = image is None or image is self.image
+        if do_cache and self._image_within_bounds is not None:
+            return self._image_within_bounds
+
         image = self.image if image is None else image
 
         # Get the subset of the image corresponding to this mask.
-        return image[self.min_x:self.max_x, self.min_y:self.max_y] / 255.0
+        result = image[self.min_x:self.max_x, self.min_y:self.max_y] / 255.0
+        if do_cache:
+            self._image_within_bounds = result
+        return result
 
-    def image_under_mask(self, image=None):
+    def image_under_mask(self, image=None) -> NpImage:
         """
         Returns the image under the mask with the pixels
         not within the mask being marked as 0.
         """
+        do_cache = image is None or image is self.image
+        if do_cache and self._image_under_mask is not None:
+            return self._image_under_mask
+
         # Apply the mask to the image.
-        return self.image_within_bounds(image) * self.mask
+        result = self.image_within_bounds(image) * self.mask
+        if do_cache:
+            self._image_under_mask = result
+        return result
 
     def difference_image(self, image: Optional[NpImage] = None) -> NpImage:
         """

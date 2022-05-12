@@ -106,7 +106,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
         new_worm = CamoWorm(
             clamp(x, 0, self.image.shape[1]),
             clamp(y, 0, self.image.shape[0]),
-            clamp(r, 10, 100 if score < 0 else 600),
+            clamp(r, 10, 100 if score < 0 else (600 if score < 100 else 1200)),
             (theta + 20 * math.pi) % math.pi,
             clamp(dr, -dr_max, dr_max),
             # If the deviation is small, then the angle doesn't matter that much, so standardise it.
