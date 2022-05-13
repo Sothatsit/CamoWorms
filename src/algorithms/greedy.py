@@ -25,13 +25,18 @@ class GreedyClewEvolution(GeneticClewEvolution):
                  evolve_clew_size: bool = True,
                  progress_dir: Optional[str] = "progress",
                  profile_file: Optional[str] = "profile.prof"):
-        super().__init__(edge_enhance(image), inital_clew_size, name=name,
-                         evolve_clew_size=evolve_clew_size, progress_dir=progress_dir, profile_file=profile_file)
+        super().__init__(
+            edge_enhance(image),
+            inital_clew_size,
+            name=name,
+            evolve_clew_size=evolve_clew_size,
+            progress_dir=progress_dir,
+            profile_file=profile_file
+        )
 
     def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap: float = 0.5, for_new_worm: bool = False) -> float:
         """ A basic benchmark scoring function. """
-        score = 100 * \
-            score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
+        score = 100 * score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
 
         # Promotes bigger worms if the worms are already decent.
         score += 0.15 * (1 if score > 0 else -1) * (worm.r + 2 * worm.width)
@@ -62,18 +67,19 @@ class GreedyClewEvolution(GeneticClewEvolution):
 
         return 0.5 * score
 
-    def _random_mutate(self, worm: CamoWorm, score: float, *, min_temp: float = 0.2, drastic_chance: float = 0.1) -> CamoWorm:
+    def _random_mutate(self, worm: CamoWorm, score: float, *,
+                       min_temp: float = 0.2, drastic_chance: float = 0.1) -> CamoWorm:
+
         # We make bigger mutations to worms with lower scores.
-        temp = min_temp + (1 - min_temp) * clamp(1 - score / 100, 0, 1)
+        temp = min_temp + (1 - min_temp/2) * clamp(1 - score / 100, 0, 2)
         if rng.random() < drastic_chance:
             temp = 1
         temp = min_temp + (1 - min_temp) * \
             ((temp - min_temp) / (1 - min_temp))**2
 
-        # When the score is good, we grow the worm more often.
-        # When the score is bad, we shrink the worm more often.
+        # When the score is good, we avoid shrinking the worm.
         below_ratio = 1.0 if score < 0 else 0.2
-        above_ratio = 0.2 if score < 0 else 1.0
+        above_ratio = 1.0
         change_r = 4 * rng.standard_normal() * (1.1 - temp)
         change_width = 3 * rng.standard_normal() * (1.1 - temp)
         change_r *= (below_ratio if change_r < 0 else above_ratio)
@@ -135,7 +141,8 @@ class GreedyClewEvolution(GeneticClewEvolution):
         new_score = worm_score
 
         # Try some random mutations to improve the worm.
-        for i in range(20):
+        tests = 50 if worm_score < 0 else (20 if worm_score < 100 else 10)
+        for i in range(tests):
             mutated_worm = self.random_mutate(worm, worm_score)
             if mutated_worm is None:
                 continue

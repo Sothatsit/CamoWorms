@@ -123,6 +123,18 @@ class CircleMask:
                                          circle_from_y:circle_to_y]
             np.minimum(target_area, source_area, out=target_area)
 
+    def draw_mask_many(self, target_mask: np.ndarray, points: np.ndarray):
+        """ Applies this circle to all the x/y points within the mask. """
+        areas = self.get_many_overlapping_areas(target_mask, points)
+        for (target_from_x, target_from_y), (target_to_x, target_to_y),  \
+                (circle_from_x, circle_from_y), (circle_to_x, circle_to_y) in areas:
+
+            target_area = target_mask[target_from_x:target_to_x,
+                                      target_from_y:target_to_y]
+            source_area = self.mask[circle_from_x:circle_to_x,
+                                    circle_from_y:circle_to_y]
+            np.logical_or(target_area, source_area, out=target_area)
+
     def remove_many_from_mask(self, target_mask: np.ndarray, points: np.ndarray):
         """ Erases this circle from the target mask at all the given x/y points. """
         areas = self.get_many_overlapping_areas(target_mask, points)
@@ -170,15 +182,17 @@ class WormMask:
     OUTER_MAX_DIST: Final[int] = 10
 
     def __init__(self, worm: CamoWorm, image: NpImage,
-                 *, copy: 'WormMask' = None, all_widths_accurate: bool = False):
+                 *, copy: 'WormMask' = None, gen_distances: bool = False):
         """
-        :param all_widths_accurate: The mask will be generated so that its distance array
-                                    will be accurate for all widths of worm. This is only
-                                    useful if you are testing many widths of worm. Otherwise,
-                                    for larger worms this really slows down mask generation.
+        :param gen_distances: The mask will be generated with a distance array
+                              that will be accurate for many widths of worm. This is only
+                              useful if you are testing many widths of worm. Otherwise,
+                              for larger worms this really slows down mask generation.
         """
         self.worm = worm
         self.image = image
+        self.gen_distances = gen_distances
+        self.distances: Optional[np.ndarray] = None
 
         if copy is not None:
             self.min_x = copy.min_x
@@ -217,11 +231,10 @@ class WormMask:
                 self.min_x = 0
                 self.min_y = 0
                 self.points = self.points[0:1]
-                self.distances = np.full(
-                    (1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
+                self.distances = np.full((1, 1), WormMask.FAR_DISTANCE, dtype=NpImageDType)
             else:
                 # 2. Some points are really close together, so we can filter some of them out for speed.
-                if all_widths_accurate:
+                if gen_distances:
                     point_interval = 2
                 else:
                     point_interval = max(2.0, radius / 2)
@@ -230,14 +243,10 @@ class WormMask:
                     self.points, point_interval=point_interval)
 
                 # 3. Apply a circle mask at each point on the curve to the mask.
-                self.distances = np.full(
-                    (width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)
-                circle_mask = CircleMask.get_cached(
-                    math.ceil(radius) + WormMask.OUTER_MAX_DIST)
-                mask_min_pt = np.array(
-                    [self.min_x, self.min_y], dtype=self.points.dtype)
-                circle_mask.apply_many(
-                    self.distances, self.points - mask_min_pt)
+                circle_mask = CircleMask.get_cached(radius + WormMask.OUTER_MAX_DIST)
+                mask_min_pt = np.array([self.min_x, self.min_y], dtype=self.points.dtype)
+                self.distances = np.full((width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)
+                circle_mask.apply_many(self.distances, self.points - mask_min_pt)
 
             self.recalculate_mask()
             self.width = self.mask.shape[0]
@@ -258,7 +267,9 @@ class WormMask:
         return WormMask(self.worm, self.image, copy=self)
 
     def recalculate_mask(self):
-        """ Re-calculates the mask based upon the worm associated with this mask. """
+        """
+        Re-calculates the mask based upon the worm associated with this mask.
+        """
         self.mask = self.distances < self.radius**2
         self.area = int(np.sum(self.mask))
 

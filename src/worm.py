@@ -54,14 +54,14 @@ class CamoWorm:
         self.bezier: FastBezierSegment = FastBezierSegment(np.array([p0, p1, p2]))
 
     def copy(self, *,
-             x: Optional[float],
-             y: Optional[float],
-             r: Optional[float],
-             theta: Optional[float],
-             dr: Optional[float],
-             dgamma: Optional[float],
-             width: Optional[float],
-             colour: Optional[float]) -> CamoWorm:
+             x: Optional[float] = None,
+             y: Optional[float] = None,
+             r: Optional[float] = None,
+             theta: Optional[float] = None,
+             dr: Optional[float] = None,
+             dgamma: Optional[float] = None,
+             width: Optional[float] = None,
+             colour: Optional[float] = None) -> CamoWorm:
         """ Creates a copy of this worm with any defined properties overridden. """
         return CamoWorm(
             self.x if x is None else x,

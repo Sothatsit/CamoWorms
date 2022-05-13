@@ -174,20 +174,13 @@ class GeneticClewEvolution:
         self.clew.append(worm)
         self.clew_masks.append(worm_mask)
 
-    def remove_worst_worm(self, worm_scores):
-        """
-        Removes the worst worm in the clew that is being evolved.
-        """
-        remove_index = np.argmin(worm_scores)
-        del self.clew[remove_index]
-        del self.clew_masks[remove_index]
-
-    def add_new_random_worm(self, *, test_worms=1000):
+    def add_new_random_worm(self, *, test_worms=100):
         """
         Adds a new random worm to the clew that is being evolved.
         """
-        best_worm = None
-        best_worm_score = 0
+        best_worm: Optional[CamoWorm] = None
+        best_worm_mask: Optional[WormMask] = None
+        best_worm_score: float = 0
         for i in range(test_worms):
             new_worm = CamoWorm.random(self.image.shape)
             new_worm_mask = WormMask(new_worm, self.image)
@@ -196,10 +189,11 @@ class GeneticClewEvolution:
                 new_worm, new_worm_mask, for_new_worm=True)
             if best_worm is None or new_worm_score > best_worm_score:
                 best_worm = new_worm
+                best_worm_mask = new_worm_mask
                 best_worm_score = new_worm_score
 
-        best_worm_mask, _ = locally_optimise_worm(self.image, best_worm)
-        self.add_worm(best_worm, best_worm_mask)
+        if best_worm is not None:
+            self.add_worm(best_worm, best_worm_mask)
 
     def sort_clew_by_scores(self, worm_scores: Iterable[float]) -> list[float]:
         """
@@ -248,7 +242,8 @@ class GeneticClewEvolution:
 
             # If no worms were changed, then add or remove worms.
             if min_worm_score < 0 and len(self.clew) > self.initial_clew_size:
-                self.remove_worst_worm(worm_scores)
+                del self.clew[0]
+                del self.clew_masks[0]
                 changed_worms += 1
                 break  # Only remove 1 worm at a time.
             else:
