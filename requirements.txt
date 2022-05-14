@@ -1,8 +1,7 @@
-numpy~=1.22.3
+numpy~=1.21.5
 matplotlib~=3.5.1
 scikit-learn~=1.0.1
 scikit-image~=0.19.2
 imageio~=2.9.0
 scipy~=1.7.3
 pygifsicle~=1.0.5
-imageio~=2.9.0
