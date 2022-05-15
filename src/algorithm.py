@@ -12,7 +12,6 @@ from typing import Tuple, Optional, Iterable
 from skimage.metrics import structural_similarity
 
 from src import NpImage
-from src.algorithms.local_search import locally_optimise_worm, locally_optimise_clew
 from src.image_manipulation import find_median_colour
 from src.plotting import Drawing
 from src.progress_image_generator import ProgressImageGenerator
@@ -169,8 +168,7 @@ class GeneticClewEvolution:
         """
         Adds a new worm to the clew that is being evolved.
         """
-        worm_mask = WormMask(
-            worm, self.image) if worm_mask is None else worm_mask
+        worm_mask = WormMask.from_worm(worm, self.image) if worm_mask is None else worm_mask
         self.clew.append(worm)
         self.clew_masks.append(worm_mask)
 
@@ -183,7 +181,7 @@ class GeneticClewEvolution:
         best_worm_score: float = 0
         for i in range(test_worms):
             new_worm = CamoWorm.random(self.image.shape)
-            new_worm_mask = WormMask(new_worm, self.image)
+            new_worm_mask = WormMask.from_worm(new_worm, self.image)
             new_worm.colour = new_worm_mask.mean_colour()
             new_worm_score = self.score(
                 new_worm, new_worm_mask, for_new_worm=True)

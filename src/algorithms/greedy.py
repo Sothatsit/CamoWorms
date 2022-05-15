@@ -36,7 +36,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
 
     def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap: float = 0.5, for_new_worm: bool = False) -> float:
         """ A basic benchmark scoring function. """
-        score = 100 * score_worm_isolated(worm, worm_mask, worm_mask.create_outer_mask())
+        score = 100 * score_worm_isolated(worm.colour, worm_mask, worm_mask.create_outer_mask())
 
         # Promotes bigger worms if the worms are already decent.
         score += 0.15 * (1 if score > 0 else -1) * (worm.r + 2 * worm.width)
@@ -147,7 +147,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
             if mutated_worm is None:
                 continue
 
-            mutated_worm_mask = WormMask(mutated_worm, self.image)
+            mutated_worm_mask = WormMask.from_worm(mutated_worm, self.image)
             median_colour = mutated_worm_mask.mean_colour()
             if median_colour is not None:
                 mutated_worm.colour = median_colour

@@ -8,7 +8,7 @@ from src.worm import CamoWorm
 from src.worm_mask import WormMask
 
 
-def score_worm_isolated(worm: CamoWorm, mask: WormMask, outer_mask: WormMask) -> float:
+def score_worm_isolated(colour: float, mask: WormMask, outer_mask: WormMask) -> float:
     """
     Scores the given worm mask based on what is below and around it in the image.
     Does not consider other worms in any clew that the worm is a part of.
@@ -17,7 +17,7 @@ def score_worm_isolated(worm: CamoWorm, mask: WormMask, outer_mask: WormMask) ->
         return -1
 
     # Promotes the worms being similar colour to their background.
-    body_score = -4 * np.sum(mask.difference_image()**2) / max(1, mask.area)
+    body_score = -4 * np.sum(mask.difference_image(colour)**2) / max(1, mask.area)
 
     # Promotes larger good worms.
     # Works against larger bad worms.
@@ -27,7 +27,7 @@ def score_worm_isolated(worm: CamoWorm, mask: WormMask, outer_mask: WormMask) ->
     body_score -= 0.09
 
     # Promotes the regions outside the worm being dissimilar colour.
-    edge_score = np.sum(outer_mask.difference_image()) / max(1, outer_mask.area)
+    edge_score = np.sum(outer_mask.difference_image(colour)) / max(1, outer_mask.area)
 
     edge_score -= 0.025
     edge_score *= max(1, outer_mask.area) ** 0.3
@@ -45,44 +45,37 @@ def locally_optimise_worm(
     Returns the inner and outer masks of the worm.
     """
     # Determine the best width based upon what's behind the worm.
-    worm.width = max_width
-    mask = WormMask(worm, image, gen_distances=True)
+    mask = WormMask(image, max_width, worm.r, worm.dr, worm.bezier, gen_distances=True)
     outer_mask = mask.copy()
     best_width = -1
     best_score = 0
     for width in np.linspace(min_width, max_width, 20):
-        # Update the worm's width.
-        worm.width = width
-
         # Re-calculate the mask with the new width.
-        mask.recalculate_mask()
+        mask.recalculate_mask(new_width=width)
         mask.create_outer_mask(dest=outer_mask)
 
         # Update the colour of the worm.
         new_colour = mask.mean_colour()
-        if new_colour is not None:
-            worm.colour = new_colour
 
         # Score the width.
-        score = score_worm_isolated(worm, mask, outer_mask)
+        score = score_worm_isolated(new_colour, mask, outer_mask)
         if best_width == -1 or (score > 0 and score > best_score):
             best_width = width
             best_score = score
 
     # Apply the best width to the worm.
     worm.width = best_width
-    mask.recalculate_mask()
-    mask.create_outer_mask(dest=outer_mask)
+    mask.recalculate_mask(new_width=best_width)
 
     # Determine the colour based on what's behind the worm.
     new_colour = mask.mean_colour()
     if new_colour is not None:
         worm.colour = new_colour
 
-    return mask, outer_mask
+    return mask
 
 
-def locally_optimise_clew(image: NpImage, clew: list[CamoWorm]) -> list[tuple[WormMask, WormMask]]:
+def locally_optimise_clew(image: NpImage, clew: list[CamoWorm]) -> list[WormMask]:
     """ Runs the local search optimisation on each worm in a clew. """
     output_masks = []
     for worm in clew:

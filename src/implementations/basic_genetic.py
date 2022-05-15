@@ -25,10 +25,10 @@ class Underlying:
 def run_basic_genetic(image: NpImage, clew_size: int, number_of_clews: int, total_iterations: int) -> None:
     """ Runs the basic genetic algorithm. """
 
-    def worm_cost(mask: WormMask) -> float:
+    def worm_cost(worm: CamoWorm, mask: WormMask) -> float:
         """ Cost of an individual worm. """
 
-        return cast(float, np.sum(mask.difference_image()))
+        return cast(float, np.sum(mask.difference_image(worm.colour)))
 
     def random_individual() -> Underlying:
         """ Generates a random clew. """
@@ -36,8 +36,8 @@ def run_basic_genetic(image: NpImage, clew_size: int, number_of_clews: int, tota
         shape = cast(tuple[int, int], image.shape)
 
         clew = [CamoWorm.random(shape) for _ in range(clew_size)]
-        worm_masks = [WormMask(worm, image) for worm in clew]
-        worm_costs = [worm_cost(mask) for mask in worm_masks]
+        worm_masks = [WormMask.from_worm(worm, image) for worm in clew]
+        worm_costs = [worm_cost(worm, mask) for worm, mask in zip(clew, worm_masks)]
 
         return Underlying(clew, worm_masks, worm_costs)
 
@@ -80,7 +80,7 @@ def run_basic_genetic(image: NpImage, clew_size: int, number_of_clews: int, tota
         for index, worm in enumerate(new_individual.clew):
             if rng.random() < 0.01:
                 new_worm = mutate_worm(worm)
-                new_mask = WormMask(new_worm, image)
+                new_mask = WormMask.from_worm(new_worm, image)
                 new_individual.clew[index] = new_worm
                 new_individual.worm_masks[index] = new_mask
                 new_individual.worm_costs[index] = worm_cost(new_mask)

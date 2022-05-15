@@ -4,6 +4,7 @@ from typing import Optional, Final
 import numpy as np
 
 from src import NpImage, NpImageDType
+from src.bezier import FastBezierSegment
 from src.worm import CamoWorm
 
 
@@ -174,6 +175,10 @@ class CircleMask:
         return mask
 
 
+def radius_from_worm_width(width: float) -> float:
+    return width / 2 + 1.5
+
+
 class WormMask:
     """
     Contains a mask of a worm in an image.
@@ -181,15 +186,26 @@ class WormMask:
     FAR_DISTANCE: Final[float] = 1e12
     OUTER_MAX_DIST: Final[int] = 10
 
-    def __init__(self, worm: CamoWorm, image: NpImage,
-                 *, copy: 'WormMask' = None, gen_distances: bool = False):
+    def __init__(
+            self,
+            image: NpImage,
+            worm_width: float,
+            worm_r: float,
+            worm_dr: float,
+            worm_bezier: FastBezierSegment,
+            *,
+            copy: 'WormMask' = None,
+            gen_distances: bool = False):
         """
         :param gen_distances: The mask will be generated with a distance array
                               that will be accurate for many widths of worm. This is only
                               useful if you are testing many widths of worm. Otherwise,
                               for larger worms this really slows down mask generation.
         """
-        self.worm = worm
+        self.worm_width: float = worm_width
+        self.worm_r: float = worm_r
+        self.worm_dr: float = worm_dr
+        self.worm_bezier: FastBezierSegment = worm_bezier
         self.image = image
         self.gen_distances = gen_distances
         self.distances: Optional[np.ndarray] = None
@@ -201,20 +217,21 @@ class WormMask:
             self.max_y = copy.max_y
             self.width = copy.width
             self.height = copy.height
+            self.radius = copy.radius
             self.distances = copy.distances
             self.mask = copy.mask
             self.area = copy.area
         else:
             # 1. Calculate some information about the worm
             img_width, img_height = image.shape
-            radius = worm.width / 2 + 1.5
-            n_points_estimate = math.ceil(1.5 * worm.r + 1.5 * abs(worm.dr))
-            self.points = worm.bezier(np.linspace(
+            self.radius = radius_from_worm_width(worm_width)
+            n_points_estimate = math.ceil(1.5 * worm_r + 1.5 * abs(worm_dr))
+            self.points = worm_bezier(np.linspace(
                 0, 1, num=n_points_estimate))[:, ::-1]
             self.dense_points = self.points
 
             # The padding is needed for the radius of the circle and the outer mask calculation.
-            padding = math.ceil(radius * 1.5) + WormMask.OUTER_MAX_DIST
+            padding = math.ceil(self.radius * 1.5) + WormMask.OUTER_MAX_DIST
             self.min_x = max(0, math.floor(
                 np.amin(self.points[:, 0])) - padding)
             self.min_y = max(0, math.floor(
@@ -237,13 +254,13 @@ class WormMask:
                 if gen_distances:
                     point_interval = 2
                 else:
-                    point_interval = max(2.0, radius / 2)
+                    point_interval = max(2.0, self.radius / 2)
 
                 self.points = filter_out_close_points(
                     self.points, point_interval=point_interval)
 
                 # 3. Apply a circle mask at each point on the curve to the mask.
-                circle_mask = CircleMask.get_cached(radius + WormMask.OUTER_MAX_DIST)
+                circle_mask = CircleMask.get_cached(self.radius + WormMask.OUTER_MAX_DIST)
                 mask_min_pt = np.array([self.min_x, self.min_y], dtype=self.points.dtype)
                 self.distances = np.full((width, height), WormMask.FAR_DISTANCE, dtype=NpImageDType)
                 circle_mask.apply_many(self.distances, self.points - mask_min_pt)
@@ -255,21 +272,41 @@ class WormMask:
             self.max_y = self.min_y + self.height
 
         # Cached results.
+        self._outer_mask: Optional[WormMask] = None
         self._image_within_bounds: Optional[NpImage] = None
         self._image_under_mask: Optional[NpImage] = None
 
-    @property
-    def radius(self) -> float:
-        return self.worm.width / 2.0
+    @staticmethod
+    def from_worm(worm: CamoWorm, image: NpImage, **kwargs):
+        """ Creates a WormMask from the given worm for the given image. """
+        return WormMask(
+            image,
+            worm.width,
+            worm.r,
+            worm.dr,
+            worm.bezier,
+            **kwargs
+        )
 
     def copy(self) -> 'WormMask':
         """ Generates a copy of this worm. """
-        return WormMask(self.worm, self.image, copy=self)
+        return WormMask(
+            self.image,
+            self.worm_width,
+            self.worm_r,
+            self.worm_dr,
+            self.worm_bezier,
+            copy=self
+        )
 
-    def recalculate_mask(self):
+    def recalculate_mask(self, new_width: Optional[float] = None):
         """
         Re-calculates the mask based upon the worm associated with this mask.
         """
+        if new_width is not None:
+            self.worm_width = new_width
+            self.radius = radius_from_worm_width(new_width)
+
         self.mask = self.distances < self.radius**2
         self.area = int(np.sum(self.mask))
 
@@ -280,8 +317,11 @@ class WormMask:
         """
         Generates a mask encompassing the sides of this mask.
         """
-        distance = min(float(WormMask.OUTER_MAX_DIST),
-                       max(1.0, self.worm.width / 2.0))
+        do_cache = dest is None
+        if do_cache and self._outer_mask is not None:
+            return self._outer_mask
+
+        distance = min(float(WormMask.OUTER_MAX_DIST), max(1.0, self.worm_width / 2.0))
 
         # Create the new mask.
         if dest is None:
@@ -289,7 +329,7 @@ class WormMask:
         dest.distances = self.distances.copy()
 
         # Update the mask to its outer edge.
-        outer_radius = self.worm.width / 2 + distance
+        outer_radius = self.worm_width / 2 + distance
         dest.mask = (dest.distances < (outer_radius ** 2)) & (~self.mask)
         dest.area = np.sum(dest.mask)
 
@@ -313,10 +353,11 @@ class WormMask:
             remove_points.append(pt_3)
 
         # Draw black circles around the points.
-        mask_min_pt = np.array([self.min_x, self.min_y],
-                               dtype=self.points.dtype)
-        circle_mask.remove_many_from_mask(
-            dest.mask, np.array(remove_points) - mask_min_pt)
+        mask_min_pt = np.array([self.min_x, self.min_y], dtype=self.points.dtype)
+        circle_mask.remove_many_from_mask(dest.mask, np.array(remove_points) - mask_min_pt)
+
+        if do_cache:
+            self._outer_mask = dest
         return dest
 
     def draw_into(self, image: NpImage, colour: float) -> None:
@@ -365,17 +406,18 @@ class WormMask:
             self._image_under_mask = result
         return result
 
-    def difference_image(self, image: Optional[NpImage] = None) -> NpImage:
+    def difference_image(self, worm_colour: float, image: Optional[NpImage] = None) -> NpImage:
         """
         This applies this mask to the image, to calculate the differences
         between the colour of the worm and all the pixels beneath the worm.
         """
         # 1. Calculate the difference of the colour of the worm to its background.
-        diff_image = np.absolute(
-            self.image_under_mask(image) - self.worm.colour)
+        diff_image = self.image_under_mask(image) - worm_colour
+        np.absolute(diff_image, out=diff_image)
 
         # 2. Apply the mask to the difference.
-        return diff_image * self.mask
+        diff_image *= self.mask
+        return diff_image
 
     def mean_colour(self, image: Optional[NpImage] = None) -> Optional[float]:
         """
