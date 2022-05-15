@@ -83,7 +83,7 @@ def run_basic_genetic(image: NpImage, clew_size: int, number_of_clews: int, tota
                 new_mask = WormMask.from_worm(new_worm, image)
                 new_individual.clew[index] = new_worm
                 new_individual.worm_masks[index] = new_mask
-                new_individual.worm_costs[index] = worm_cost(new_mask)
+                new_individual.worm_costs[index] = worm_cost(new_worm, new_mask)
 
         return new_individual
 

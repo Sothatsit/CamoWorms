@@ -59,10 +59,10 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
         """
 
         worm = map_vector_to_worm(image, individual)
-        mask = WormMask(worm, image)
+        mask = WormMask.from_worm(worm, image)
         outer_mask = mask.create_outer_mask()
 
-        main_cost = -score_worm_isolated(worm, mask, outer_mask)
+        main_cost = -score_worm_isolated(worm.colour, mask, outer_mask)
 
         blank_image: NpImage = np.zeros(image.shape, dtype=np.float64)
         mask.draw_into(blank_image, 255)
@@ -110,7 +110,7 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
 
         worm_vector = result.population[:, min_index]
         worm = map_vector_to_worm(image, worm_vector)
-        worm_mask = WormMask(worm, image)
+        worm_mask = WormMask.from_worm(worm, image)
 
         worm_mask.draw_into(overlap_image, 255)
         imageio.imwrite(f"progress/mask/gen-{index:06}.png", np.rot90(overlap_image, 2).astype(np.uint8))
