@@ -5,3 +5,4 @@ scikit-image~=0.19.2
 imageio~=2.9.0
 scipy~=1.7.3
 pygifsicle~=1.0.5
+opencv-python~=4.5.5.64
