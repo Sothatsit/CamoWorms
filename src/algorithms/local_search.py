@@ -1,11 +1,23 @@
 """
 This file contains logic to search for the best parameters to use for a worm.
 """
+import math
+from typing import Optional
+
 import numpy as np
 from src import NpImage
 from src.helpers import clamp
 from src.worm import CamoWorm
 from src.worm_mask import WormMask
+
+
+def fft_magnitudes(values: np.ndarray) -> Optional[np.ndarray]:
+    if len(values) < 8:
+        return None
+
+    magnitudes = np.abs(np.fft.rfft(values)[1:])
+    magnitudes /= 5
+    return magnitudes
 
 
 def score_worm_isolated(colour: float, mask: WormMask, outer_mask: WormMask) -> float:
@@ -17,24 +29,34 @@ def score_worm_isolated(colour: float, mask: WormMask, outer_mask: WormMask) -> 
         return -1
 
     # Promotes the worms being similar colour to their background.
-    body_score = -4 * np.sum(mask.difference_image(colour)**2) / max(1, mask.area)
+    body_score = -5 * np.sum(mask.difference_image(colour)**2) / max(1, mask.area)
 
     # Promotes larger good worms.
     # Works against larger bad worms.
-    body_score += 0.09
-    body_score *= clamp(mask.area, 1, 1000)**0.25
-    body_score *= clamp(mask.area - 1000, 1, 1000)**0.15
-    body_score -= 0.09
+    body_score += 0.1
+    body_score *= clamp(mask.area, 1, 1000)**0.225
+    body_score *= clamp(mask.area - 1000, 1, 1000)**0.175
+    body_score -= 0.1
 
     # Promotes the regions outside the worm being dissimilar colour.
     edge_score = np.sum(outer_mask.difference_image(colour)) / max(1, outer_mask.area)
+    edge_score *= max(1, outer_mask.area)**0.35
 
-    edge_score -= 0.025
-    edge_score *= max(1, outer_mask.area) ** 0.3
-    edge_score += 0.025
+    # Promotes consistent colours below the worm.
+    colour_fft = fft_magnitudes(mask.colour_under_points(buckets=16))
+    if colour_fft is not None:
+        colour_fft -= 0.08
+        np.maximum(colour_fft, 0, out=colour_fft)
+        consistency_score = -5 * np.sum(colour_fft[0:3])
+        consistency_score *= max(1, outer_mask.area)**0.35
+    else:
+        consistency_score = -999
+
+    # Promotes smaller worms slightly.
+    area_score = -clamp(mask.area / 3000, 0.7, 1) - 0.1 * mask.width**0.5
 
     # We bias the result as we want a score of 0 to represent an okay worm.
-    return -clamp(mask.area / 3000, 0.7, 1) + 1.2 * body_score + 1.3 * edge_score
+    return 0.2 + area_score + 1 * body_score + 1.5 * edge_score + 1 * consistency_score
 
 
 def locally_optimise_worm(
@@ -45,10 +67,10 @@ def locally_optimise_worm(
     Returns the inner and outer masks of the worm.
     """
     # Determine the best width based upon what's behind the worm.
-    mask = WormMask(image, max_width, worm.r, worm.dr, worm.bezier, gen_distances=True)
+    mask = WormMask(image, max_width, worm.r, worm.dr, worm.bezier, high_qual_distances=True)
     outer_mask = mask.copy()
     best_width = -1
-    best_score = 0
+    best_score = -1
     for width in np.linspace(min_width, max_width, 20):
         # Re-calculate the mask with the new width.
         mask.recalculate_mask(new_width=width)
@@ -59,7 +81,7 @@ def locally_optimise_worm(
 
         # Score the width.
         score = score_worm_isolated(new_colour, mask, outer_mask)
-        if best_width == -1 or (score > 0 and score > best_score):
+        if best_width == -1 or score > best_score:
             best_width = width
             best_score = score
 
