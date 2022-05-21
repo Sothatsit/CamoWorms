@@ -1,27 +1,64 @@
 # Camo Worms
 
-A project for CITS4404
+This repository contains our work on the 2022 semester 1 CITS4404 group project.
 
+The purpose of this project was to explore the use of population based algorithms to reduce the visual noise in Optical Coherence Tomography (OCT) images.
+The original project brief can be found in [`./docs/practical-project.pdf`](./docs/practical-project.pdf).
 
 ## Running
 
+This project can be run natively or inside docker for improved compatability.
+A jupytter notebook is also avaliable.
+
 ### In Docker
 
-*These instructions assume that you have docker installed.*
+The project can be run in docker to improve compatability and ease of deployment in cloud environments.
 
-The project can be run in docker to improve portability.
+The docker run script maps the progress frames generated into `./progress/<unix epoch at start>/`.
+**Note** that these files and folders will be owned by **root**.
+Ownership can be easily updated using `chown`.
 
-**Note:** files will be created in the `progress` directory.
-These files will be owned by **root**.
+#### Requirements
+
+- Docker
+    - Known working on version `20.10.16`
+- Unix based system
+    - For the run scripts
+
+#### Steps
+
+Before the following steps `opencv` must be removed from `requirements.txt`.
 
 ```bash
-chmod +x ./bin/* # Update script permissions to be runable
+# Update script permissions to be runable
+chmod +x ./bin/*
 
-# Builds the docker image
+# Build the docker image
 # This needs to be rebuilt after every code change
 ./bin/build
 
 # Start a container based on the created image
 # The number of generations can be controlled and defaults to 10
-./bin/start <number of generations>
+./bin/start <number of generations> <overlap decay rate>
 ```
+
+### Natively
+
+#### Requirements
+
+- Python `3.10+`
+- Assumes `python` in in `PATH`
+
+#### Steps
+
+```bash
+# Install the required python packages
+pip install -r requirements.txt
+
+# Run the program
+python main.py <number of generations> <overlap decay rate>
+```
+
+### Notebook
+
+A jupyter notebook ([`CamoWorms.ipynb`](./CamoWorms.ipynb)) is also provided that includes demos of mask generation, worm manipluation, and the greedy algorithm.
