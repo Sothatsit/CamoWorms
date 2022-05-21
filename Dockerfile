@@ -15,4 +15,4 @@ COPY main.py main.py
 COPY src/ src/
 
 ENTRYPOINT ["python", "main.py"]
-CMD ["10"]
+CMD ["10", "0.95"]

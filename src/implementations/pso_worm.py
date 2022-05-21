@@ -4,7 +4,7 @@ import numpy as np
 from src import NpImage
 from src.algorithms.local_search import score_worm_isolated
 from src.algorithms.particle_swarm import ParticleSwarmOptimisation, psoNDarray
-from src.progress_image_generator import ProgressImageGenerator
+from src.progress_image_generator import ProgressImageGenerator, create_and_empty_directory
 from src.worm import CamoWorm
 from src.worm_mask import WormMask
 
@@ -41,7 +41,13 @@ def map_vector_to_worm(image: NpImage, worm_vector: psoNDarray) -> CamoWorm:
     return worm
 
 
-def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_worm: int = 100, clew_size: int = 50) -> None:
+def run_worm_search_pos(
+        image: NpImage,
+        total_worms: int,
+        *,
+        generations_per_worm: int = 100,
+        clew_size: int = 50,
+        overlap_image_decay_rate: float = 0.95) -> None:
     """
     Tries to optimise a single worm.
 
@@ -49,7 +55,6 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
     [x, y, r, theta, dr, dgamma, width, colour]
     """
 
-    overlap_image_decay_rate = 0.94
     overlap_image: NpImage = np.zeros(image.shape, dtype=np.float64)
 
     def cost_function(individual: psoNDarray) -> float:
@@ -89,6 +94,7 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
         image, "./progress/standard")
     progress_image_generator_white = ProgressImageGenerator(
         np.full_like(image, 255.0), "./progress/white")
+    create_and_empty_directory("./progress/overlap")
 
     worms = []
     masks = []
@@ -103,7 +109,7 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
             random_direction_function=random_individual_function,
             w=momentum_function,
             c1=2,
-            c2=1
+            c2=2
         )
 
         result = algorithm_instance.run_generations(generations_per_worm)[-1]
