@@ -12,14 +12,14 @@ from src.implementations.pso_worm import run_worm_search_pos
 
 
 def main() -> None:
-    total_generations = int(sys.argv[1])
+    input_var_1 = int(sys.argv[1])
 
     image = crop(load_image("images", "original"), (320, 560, 160, 880))
 
     with cProfile.Profile() as pr:
-        # run_greedy(image, clew_size=10, total_generations=total_generations)
+        # run_greedy(image, clew_size=10, total_generations=input_var_1)
         # run_quadratic_search_pos()
-        run_worm_search_pos(image, 200)
+        run_worm_search_pos(image, input_var_1, generations_per_worm=100, clew_size=100)
 
     stats = pstats.Stats(pr)
     stats.sort_stats(pstats.SortKey.TIME)
