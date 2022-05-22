@@ -138,7 +138,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
         new_score = worm_score
 
         # Try some random mutations to improve the worm.
-        tests = 50 if worm_score < 0 else (20 if worm_score < 100 else 10)
+        tests = 100 if worm_score < 0 else 25
         for i in range(tests):
             mutated_worm = self.random_mutate(worm, worm_score)
             if mutated_worm is None:
