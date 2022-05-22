@@ -4,9 +4,8 @@ import numpy as np
 from src import NpImage
 from src.algorithms.local_search import score_worm_isolated
 from src.algorithms.particle_swarm import ParticleSwarmOptimisation, psoNDarray
-from src.progress_image_generator import ProgressImageGenerator
+from src.progress_image_generator import ProgressImageGenerator, create_and_empty_directory
 from src.worm import CamoWorm
-from src.plotting import Drawing
 from src.worm_mask import WormMask
 
 
@@ -20,7 +19,7 @@ def logistic(input: psoNDarray) -> psoNDarray:
 
 def map_vector_to_worm(image: NpImage, worm_vector: psoNDarray) -> CamoWorm:
     """
-    Maps a vector of length 8 to a Camo Worm
+    Maps a vector of length 7 to a Camo Worm
     """
 
     x_lim = image.shape[1]
@@ -31,17 +30,24 @@ def map_vector_to_worm(image: NpImage, worm_vector: psoNDarray) -> CamoWorm:
     worm = CamoWorm(
         x=mapped_vector.item(0) * x_lim,
         y=mapped_vector.item(1) * y_lim,
-        r=5 + mapped_vector.item(2) * 50,
+        r=20 + mapped_vector.item(2) * 180,
         theta=2 * np.pi * mapped_vector.item(3),
-        deviation_r=5 + mapped_vector.item(4) * 50,
+        deviation_r=5 + mapped_vector.item(4) * 100,
         deviation_gamma=2 * np.pi * mapped_vector.item(5),
-        width=3 + mapped_vector.item(6) * 30,
-        colour=mapped_vector.item(7))
+        width=3 + mapped_vector.item(6) * 50,
+        # There is no value in learning the background colour when we can just match the median value
+        colour=255)
 
     return worm
 
 
-def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_worm: int = 100, clew_size: int = 50) -> None:
+def run_worm_search_pos(
+        image: NpImage,
+        total_worms: int,
+        *,
+        generations_per_worm: int = 100,
+        clew_size: int = 50,
+        overlap_image_decay_rate: float = 0.95) -> None:
     """
     Tries to optimise a single worm.
 
@@ -62,17 +68,16 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
         mask = WormMask.from_worm(worm, image)
         outer_mask = mask.create_outer_mask()
 
-        main_cost = -score_worm_isolated(worm.colour, mask, outer_mask)
+        main_cost = -score_worm_isolated(mask.median_colour(), mask, outer_mask)
 
         blank_image: NpImage = np.zeros(image.shape, dtype=np.float64)
         mask.draw_into(blank_image, 255)
-        overlap_cost: float = np.sum(blank_image * overlap_image)
+        overlap_cost: float = np.sum(blank_image * overlap_image) / 20_000_000.0
 
         return main_cost + overlap_cost
 
     def random_individual_function() -> psoNDarray:
         return np.array([
-            np.random.normal(),
             np.random.normal(),
             np.random.normal(),
             np.random.normal(),
@@ -86,7 +91,10 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
         return 0.9 - 0.6 * (generation / generations_per_worm)
 
     progress_image_generator = ProgressImageGenerator(
-        image, "./progress/")
+        image, "./progress/standard")
+    progress_image_generator_white = ProgressImageGenerator(
+        np.full_like(image, 255.0), "./progress/white")
+    create_and_empty_directory("./progress/overlap")
 
     worms = []
     masks = []
@@ -95,7 +103,7 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
 
         algorithm_instance = ParticleSwarmOptimisation(
             population_size=clew_size,
-            individual_size=8,
+            individual_size=7,
             cost_function=cost_function,
             random_individual_function=random_individual_function,
             random_direction_function=random_individual_function,
@@ -111,13 +119,17 @@ def run_worm_search_pos(image: NpImage, total_worms: int, *, generations_per_wor
         worm_vector = result.population[:, min_index]
         worm = map_vector_to_worm(image, worm_vector)
         worm_mask = WormMask.from_worm(worm, image)
+        worm.colour = worm_mask.median_colour()
 
+        overlap_image = overlap_image * overlap_image_decay_rate
         worm_mask.draw_into(overlap_image, 255)
-        imageio.imwrite(f"progress/mask/gen-{index:06}.png", np.rot90(overlap_image, 2).astype(np.uint8))
 
         worms.append(worm)
         masks.append(worm_mask)
 
         progress_image_generator.save_progress_image(worms, masks, index)
+        progress_image_generator_white.save_progress_image(worms, masks, index)
+        imageio.imwrite(f"progress/overlap/gen-{index:06}.png", np.rot90(overlap_image, 2).astype(np.uint8))
 
     progress_image_generator.generate_gif()
+    progress_image_generator_white.generate_gif()

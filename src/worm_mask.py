@@ -427,7 +427,6 @@ class WormMask:
                 vec = (end - one_off_end).astype(NpImageDType)
                 vec_len = np.linalg.norm(vec)
                 if vec_len == 0:
-                    print("len = ", vec_len, "for", end, "-", one_off_end)
                     continue
 
                 vec /= vec_len

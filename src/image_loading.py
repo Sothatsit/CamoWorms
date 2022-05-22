@@ -19,3 +19,8 @@ def load_image(image_dir: str, image_name: str, mask: Optional[Tuple[int, int, i
     if mask is not None:
         data = crop(data, mask)
     return np.flipud(data).astype(NpImageDType)
+
+
+def read_image(image_path: str):
+    """ Reads the image from the given path as a NumPy array. """
+    return np.flipud(imageio.imread(image_path)).astype(NpImageDType)
