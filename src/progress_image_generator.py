@@ -9,7 +9,7 @@ from src.worm import Clew
 from src.worm_mask import WormMask
 
 
-def build_gif(frame_directory_path: str, destination: str, *, progress_bar_height=10) -> None:
+def build_gif(frame_directory_path: str, anim_dest: str, final_dest: str, *, progress_bar_height=10) -> None:
     """ Creates a gif from the frames in frame_directory. """
 
     frame_directory = Path(frame_directory_path)
@@ -19,7 +19,8 @@ def build_gif(frame_directory_path: str, destination: str, *, progress_bar_heigh
 
     frame_files.sort()
 
-    with imageio.get_writer(destination, mode="I", duration=1/30) as writer:
+    # Create the evolution GIF
+    with imageio.get_writer(anim_dest, mode="I", duration=1/30) as writer:
         for index, frame_file in enumerate(frame_files):
             frame = imageio.imread(frame_file)
 
@@ -40,7 +41,12 @@ def build_gif(frame_directory_path: str, destination: str, *, progress_bar_heigh
 
             writer.append_data(image)
 
-    pygifsicle.optimize(destination)
+    # Optimise the evolution GIF
+    pygifsicle.optimize(anim_dest)
+
+    # Write the final frame image
+    final_frame = imageio.imread(frame_files[-1])
+    imageio.imwrite(final_dest, final_frame)
 
 
 def create_and_empty_directory(directory_path: str) -> None:
@@ -69,8 +75,11 @@ class ProgressImageGenerator:
 
     def generate_gif(self) -> None:
         """ Generates a gif with the same name as the progress directory. """
-        build_gif(f"{self.__progress_dir}/frames",
-                  f"{self.__progress_dir}/animation.gif")
+        build_gif(
+            f"{self.__progress_dir}/frames",
+            f"{self.__progress_dir}/animation.gif",
+            f"{self.__progress_dir}/final.png"
+        )
 
     def save_progress_image(self, clew: Clew, worm_masks: list[WormMask], generation_num: int) -> None:
         """ Saves a progress image of the clew. """
