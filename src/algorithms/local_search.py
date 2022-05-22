@@ -26,7 +26,7 @@ def score_worm_isolated(colour: float, mask: WormMask, outer_mask: WormMask) -> 
     Does not consider other worms in any clew that the worm is a part of.
     """
     if mask.area <= 10:
-        return -1
+        return -999999
 
     # Promotes the worms being similar colour to their background.
     body_score = -5 * np.sum(mask.difference_image(colour)**2) / max(1, mask.area)
@@ -34,23 +34,24 @@ def score_worm_isolated(colour: float, mask: WormMask, outer_mask: WormMask) -> 
     # Promotes larger good worms.
     # Works against larger bad worms.
     body_score += 0.1
-    body_score *= clamp(mask.area, 1, 1000)**0.225
-    body_score *= clamp(mask.area - 1000, 1, 1000)**0.175
+    body_score *= clamp(mask.area, 1, 1000)**0.25
+    body_score *= clamp(mask.area - 1000, 1, 1000)**0.2
     body_score -= 0.1
 
     # Promotes the regions outside the worm being dissimilar colour.
     edge_score = np.sum(outer_mask.difference_image(colour)) / max(1, outer_mask.area)
-    edge_score *= max(1, outer_mask.area)**0.35
+    edge_score *= max(1, outer_mask.area)**0.4
 
     # Promotes consistent colours below the worm.
     colour_fft = fft_magnitudes(mask.colour_under_points(buckets=16))
     if colour_fft is not None:
-        colour_fft -= 0.08
-        np.maximum(colour_fft, 0, out=colour_fft)
-        consistency_score = -5 * np.sum(colour_fft[0:3])
-        consistency_score *= max(1, outer_mask.area)**0.35
+        colour_fft -= 0.06
+        consistency_score = -np.sum(colour_fft[0:3])
+        consistency_score *= max(1.0, 0.01 * mask.area)**0.15
+        consistency_score *= max(1.0, 0.1 * mask.worm_r)**0.5
     else:
-        consistency_score = -999
+        # Either tiny or mostly off the image.
+        return -999999
 
     # Promotes smaller worms slightly.
     area_score = -clamp(mask.area / 3000, 0.7, 1) - 0.1 * mask.width**0.5

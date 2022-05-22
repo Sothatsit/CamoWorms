@@ -34,12 +34,9 @@ class GreedyClewEvolution(GeneticClewEvolution):
             profile_file=profile_file
         )
 
-    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap: float = 0.5, for_new_worm: bool = False) -> float:
+    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap: float = 0.1, for_new_worm: bool = False) -> float:
         """ A basic benchmark scoring function. """
         score = 100 * score_worm_isolated(worm.colour, worm_mask, worm_mask.create_outer_mask())
-
-        # Promotes bigger worms if the worms are already decent.
-        score += 0.15 * (1 if score > 0 else -1) * (worm.r + 2 * worm.width)
 
         # Attempts to avoid overlapping and close worms.
         avoid_close = for_new_worm or score < 0
@@ -63,7 +60,7 @@ class GreedyClewEvolution(GeneticClewEvolution):
                                            allowed_overlap) / (1 - allowed_overlap)
 
             score -= 0.1 * close_penalty
-            score -= 50 * overlap_penalty
+            score -= 20 * overlap_penalty
 
         return 0.5 * score
 

@@ -239,7 +239,7 @@ class GeneticClewEvolution:
                 break
 
             # If no worms were changed, then add or remove worms.
-            if min_worm_score < 0 and len(self.clew) > self.initial_clew_size:
+            if min_worm_score < 0 and len(self.clew) > (self.initial_clew_size + 1) // 2:
                 del self.clew[0]
                 del self.clew_masks[0]
                 changed_worms += 1

@@ -196,7 +196,7 @@ if __name__ == "__main__":
             perr("{} is not a directory".format(im_output_dir))
             sys.exit(1)
 
-        imageio.imwrite(os.path.join(im_output_dir, "target.png"), np.flipud(image).astype(np.uint8))
+        imageio.imwrite(os.path.join(im_output_dir, "target.png"), np.flipud(image)[:, ::-1].astype(np.uint8))
         args.append((im_name, algo_func, image, im_output_dir, algo_args, do_profile))
 
     with Pool(len(args)) as pool:
