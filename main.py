@@ -7,10 +7,15 @@ import cProfile
 import pstats
 from typing import Callable
 
+import imageio
+import numpy as np
+
 from src import NpImage
 from src.algorithms.greedy import GreedyClewEvolution
 from src.image_loading import read_image
 from src.implementations.pso_worm import run_worm_search_pos
+
+from multiprocessing import Pool
 
 
 def maybe_profile(func: Callable, do_profile: bool):
@@ -27,10 +32,7 @@ def maybe_profile(func: Callable, do_profile: bool):
     stats.dump_stats(filename="profile.prof")
 
 
-def run_greedy(
-        input_image: NpImage, output_dir: str, args: list[str], *,
-        do_profile: bool = False) -> None:
-
+def run_greedy(input_image: NpImage, output_dir: str, args: list[str], do_profile: bool) -> None:
     if len(args) < 2:
         perr("CamoWorms Greedy Usage:")
         perr("  python -m main greedy <input image> <output directory> <initial no. worms> <no. generations>")
@@ -55,10 +57,7 @@ def run_greedy(
     maybe_profile(run, do_profile)
 
 
-def run_particle_swarm(
-        input_image: NpImage, output_dir: str, args: list[str], *,
-        do_profile: bool = False) -> None:
-
+def run_particle_swarm(input_image: NpImage, output_dir: str, args: list[str], do_profile: bool) -> None:
     if len(args) < 2:
         perr("CamoWorms Particle Swarm Usage:")
         perr("  python -m main swarm <input image> <output directory> <no. worms> <overlap decay rate>")
@@ -80,6 +79,24 @@ def run_particle_swarm(
                             clew_size=100, overlap_image_decay_rate=overlap_decay_rate)
 
     maybe_profile(run, do_profile)
+
+
+def run_algo(
+        im_name: str, algo_func: Callable,
+        input_image: NpImage, output_dir: str, args: list[str], do_profile: bool) -> None:
+
+    """ Runs the given algorithm function with the given arguments. """
+    prefixed_name = ""
+    stdout = sys.stdout
+    if len(im_name) > 0:
+        prefixed_name = " " + im_name
+        log_file = open(os.path.join(output_dir, "log.txt"), "w")
+        sys.stdout = log_file
+        sys.stderr = log_file
+
+    print("Processing{}...".format(prefixed_name), file=stdout)
+    algo_func(input_image, output_dir, args, do_profile)
+    print("Finished processing{}".format(prefixed_name), file=stdout)
 
 
 def perr(*args, **kwargs):
@@ -117,16 +134,40 @@ if __name__ == "__main__":
     output_dir = args[2]
     algo_args = args[3:]
 
-    if not os.path.exists(input_image_path) or not os.path.isfile(input_image_path):
+    if not os.path.exists(input_image_path):
         perr("Input image path is not a valid file: {}".format(input_image_path))
         sys.exit(1)
 
-    try:
-        input_image = read_image(input_image_path)
-    except Exception as e:
-        perr("Unable to read input image from {}".format(input_image_path))
-        perr()
-        raise e
+    if os.path.isdir(input_image_path):
+        input_image_paths = []
+        for im_file in os.listdir(input_image_path):
+            im_name, ext = os.path.splitext(im_file)
+            if ext.lower() not in [".png", ".jpg", ".jpeg"]:
+                continue
+
+            im_path = os.path.join(input_image_path, im_file)
+            input_image_paths.append((im_name, im_path))
+
+        if len(input_image_paths) == 0:
+            perr("Could find no images in {}".format(input_image_path))
+            sys.exit(1)
+        elif len(input_image_paths) > 0 and do_profile:
+            perr("Cannot profile when more than one image is used as input")
+            sys.exit(1)
+    else:
+        input_image_paths = [("", input_image_path)]
+
+    input_images = []
+    for im_name, im_path in input_image_paths:
+        try:
+            input_image = read_image(im_path)
+            input_images.append((im_name, input_image))
+        except Exception as e:
+            perr("Unable to read input image from {}".format(im_path))
+            perr()
+            raise e
+
+
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -135,11 +176,31 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if algorithm == "swarm":
-        run_particle_swarm(input_image, output_dir, algo_args, do_profile=do_profile)
+        algo_func = run_particle_swarm
     elif algorithm == "greedy":
-        run_greedy(input_image, output_dir, algo_args, do_profile=do_profile)
+        algo_func = run_greedy
     else:
         perr("Unknown algorithm: {}".format(algorithm))
         perr()
         print_help()
         sys.exit(1)
+
+    # Use multiprocessing to run for all images.
+    args = []
+    for im_name, image in input_images:
+        im_output_dir = os.path.join(output_dir, im_name)
+
+        if not os.path.exists(im_output_dir):
+            os.makedirs(im_output_dir)
+        elif not os.path.isdir(im_output_dir):
+            perr("{} is not a directory".format(im_output_dir))
+            sys.exit(1)
+
+        imageio.imwrite(os.path.join(im_output_dir, "target.png"), np.flipud(image).astype(np.uint8))
+        args.append((im_name, algo_func, image, im_output_dir, algo_args, do_profile))
+
+    with Pool(len(args)) as pool:
+        pool.starmap(run_algo, args)
+
+    print()
+    print("Done!")
