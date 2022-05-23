@@ -20,12 +20,12 @@ def fft_magnitudes(values: np.ndarray) -> Optional[np.ndarray]:
     return magnitudes
 
 
-def score_worm_isolated(colour: float, mask: WormMask, outer_mask: WormMask) -> float:
+def score_worm_isolated(colour: Optional[float], mask: WormMask, outer_mask: WormMask) -> float:
     """
     Scores the given worm mask based on what is below and around it in the image.
     Does not consider other worms in any clew that the worm is a part of.
     """
-    if mask.area <= 10:
+    if colour is None or mask.area <= 10:
         return -999999
 
     # Promotes the worms being similar colour to their background.

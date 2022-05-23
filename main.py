@@ -76,8 +76,12 @@ def run_particle_swarm(input_image: NpImage, output_dir: str, args: list[str], d
         desc_file.write(f"{overlap_decay_rate = }\n")
 
     def run():
-        run_worm_search_pos(input_image, no_worms, generations_per_worm=100,
-                            clew_size=100, overlap_image_decay_rate=overlap_decay_rate)
+        run_worm_search_pos(
+            input_image, output_dir, no_worms,
+            generations_per_worm=100,
+            clew_size=100,
+            overlap_image_decay_rate=overlap_decay_rate
+        )
 
     maybe_profile(run, do_profile)
 
@@ -91,7 +95,7 @@ def run_algo(
     stdout = sys.stdout
     if len(im_name) > 0:
         prefixed_name = " " + im_name
-        log_file = open(os.path.join(output_dir, "log.txt"), "w")
+        log_file = open(os.path.join(output_dir, "log.txt"), "w", buffering=1)
         sys.stdout = log_file
         sys.stderr = log_file
 
@@ -175,8 +179,6 @@ if __name__ == "__main__":
             perr("Unable to read input image from {}".format(im_path))
             perr()
             raise e
-
-
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

@@ -15,4 +15,4 @@ COPY main.py main.py
 COPY src/ src/
 
 ENTRYPOINT ["python", "main.py"]
-CMD ["10", "0.95"]
+CMD ["swarm", "./images/inputs/original-cropped.png", "./progress", "10", "0.96"]

@@ -5,7 +5,7 @@ import numba
 import numpy as np
 
 from src import NpImage, NpImageDType
-from src.bezier import FastBezierSegment
+from src.bezier import FastBezierSegment, ConsistentBezierSegment
 from src.helpers import clamp
 from src.worm import CamoWorm
 
@@ -257,6 +257,23 @@ def _colour_under_points(points: np.ndarray, image: NpImage, buckets: int) -> np
     return colours
 
 
+linspaces_01_cache: Final[list[Optional[np.ndarray]]] = []
+
+
+def linspace_01(num: int) -> np.ndarray:
+    if num < len(linspaces_01_cache):
+        cached_value = linspaces_01_cache[num]
+        if cached_value is not None:
+            return cached_value
+    else:
+        while len(linspaces_01_cache) <= num:
+            linspaces_01_cache.append(None)
+
+    linspace_value = np.linspace(0, 1, num=num)
+    linspaces_01_cache[num] = linspace_value
+    return linspace_value
+
+
 class WormMask:
     """
     Contains a mask of a worm in an image.
@@ -270,7 +287,7 @@ class WormMask:
             worm_width: float,
             worm_r: float,
             worm_dr: float,
-            worm_bezier: FastBezierSegment,
+            worm_bezier: ConsistentBezierSegment,
             *,
             copy: 'WormMask' = None,
             high_qual_distances: bool = False):
@@ -284,7 +301,7 @@ class WormMask:
         self.worm_width: float = worm_width
         self.worm_r: float = worm_r
         self.worm_dr: float = worm_dr
-        self.worm_bezier: FastBezierSegment = worm_bezier
+        self.worm_bezier: ConsistentBezierSegment = worm_bezier
         self.image = image
         self.high_qual_distances = high_qual_distances
         self.distances: Optional[np.ndarray] = None
@@ -307,15 +324,21 @@ class WormMask:
             # 1. Calculate some information about the worm
             img_width, img_height = image.shape
             self.radius = radius_from_worm_width(worm_width)
-            n_points_estimate = math.ceil(1.5 * worm_r + 1.5 * abs(worm_dr))
 
-            raw_points = worm_bezier(
-                np.linspace(0, 1, num=n_points_estimate)
-            )[:, ::-1]
+            n_points_estimate = int(worm_bezier.length / 2) + 1
+            raw_points = worm_bezier(linspace_01(n_points_estimate))[:, ::-1]
             raw_points = filter_in_bounds_points(raw_points, img_width, img_height)
             raw_points = raw_points.astype(np.int32)
+            self.dense_points = raw_points
 
-            self.dense_points = filter_out_close_points(raw_points, point_interval=2)
+            point_interval = max(2.0, self.radius / 2)
+            if point_interval < 2.1:
+                self.points = self.dense_points
+            else:
+                n_points_estimate = int(worm_bezier.length / point_interval) + 1
+                raw_points = worm_bezier(linspace_01(n_points_estimate))[:, ::-1]
+                raw_points = filter_in_bounds_points(raw_points, img_width, img_height)
+                self.points = raw_points
 
             # Defaults in case we can't create the worm.
             self.distances = np.empty((0, 0), dtype=NpImageDType)

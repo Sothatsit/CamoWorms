@@ -13,7 +13,7 @@ import matplotlib.patches as mpatches
 from sklearn.metrics.pairwise import euclidean_distances
 
 from src import rng
-from src.bezier import FastBezierSegment
+from src.bezier import FastBezierSegment, ConsistentBezierSegment
 from src.helpers import round_to
 
 
@@ -33,7 +33,7 @@ class CamoWorm:
         self.dr: float = round_to(deviation_r, 0.5)
         self.dgamma: float = round_to(deviation_gamma, 0.005)
         self.width: float = round_to(width, 0.5)
-        self.colour: float = round_to(colour, 1/255)
+        self._colour: float = 0.5 if colour is None else round_to(colour, 1/255)
 
         e_dr = abs(self.dr)
         e_theta = self.theta + (math.pi if self.dr < 0 else 0)
@@ -51,7 +51,16 @@ class CamoWorm:
         p0 = [self.x + dx + p0[0], self.y + dy + p0[1]]
         p2 = [self.x + dx + p2[0], self.y + dy + p2[1]]
         p1 = [self.x + dx + p1[0], self.y + dy + p1[1]]
-        self.bezier: FastBezierSegment = FastBezierSegment(np.array([p0, p1, p2]))
+        self.bezier: ConsistentBezierSegment = ConsistentBezierSegment(np.array([p0, p1, p2]))
+
+    @property
+    def colour(self):
+        return self._colour
+
+    @colour.setter
+    def colour(self, colour: Optional[float]):
+        """ colour was being set to None way too often by accident. """
+        self._colour = 0.5 if colour is None else colour
 
     def copy(self, *,
              x: Optional[float] = None,
@@ -71,7 +80,7 @@ class CamoWorm:
             self.dr if dr is None else dr,
             self.dgamma if dgamma is None else dgamma,
             self.width if width is None else width,
-            self.colour if colour is None else colour
+            self._colour if colour is None else colour
         )
 
     def __eq__(self, other: object) -> bool:
@@ -85,7 +94,7 @@ class CamoWorm:
             self.dr == other.dr and \
             self.dgamma == other.dgamma and \
             self.width == other.width and \
-            self.colour == other.colour
+            self._colour == self._colour
 
     @staticmethod
     def random(image_shape: Tuple[int, int]) -> CamoWorm:
@@ -96,7 +105,7 @@ class CamoWorm:
         theta = 2 * math.pi * rng.random()
         dr = 5 * rng.standard_normal()
         colour = rng.random()
-        width = 4 + 1.5 * rng.standard_gamma(1)
+        width = 4 + 2.5 * rng.standard_gamma(1)
         return CamoWorm(midx, midy, r, theta, dr, math.pi/2, width, colour)
 
     def control_points(self) -> npt.NDArray[np.float64]:
@@ -108,14 +117,14 @@ class CamoWorm:
         return mpath.Path(control_points, [mpath.Path.MOVETO, mpath.Path.CURVE3, mpath.Path.CURVE3])
 
     def patch(self) -> mpatches.PathPatch:
-        return mpatches.PathPatch(self.path(), fc='None', ec=str(self.colour), lw=self.width/2, capstyle='round')
+        return mpatches.PathPatch(self.path(), fc='None', ec=str(self._colour), lw=self.width/2, capstyle='round')
 
     def __str__(self) -> str:
         return "CamoWorm({:.0f}, {:.0f}, {:.0f}, {:.2f}, {:.0f}, {:.2f}, {:.1f}, {:.2f})".format(
             self.x, self.y,
             self.r, self.theta,
             self.dr, self.dgamma,
-            self.width, self.colour
+            self.width, self._colour
         )
 
 

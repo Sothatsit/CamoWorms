@@ -235,7 +235,7 @@ class GeneticClewEvolution:
             std_worm_score = np.std(worm_scores)
             mean_worm_score = np.mean(worm_scores)
 
-            if changed_worms >= 2:
+            if changed_worms >= 1:
                 break
 
             # If no worms were changed, then add or remove worms.
