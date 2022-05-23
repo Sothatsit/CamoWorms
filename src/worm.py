@@ -13,7 +13,7 @@ import matplotlib.patches as mpatches
 from sklearn.metrics.pairwise import euclidean_distances
 
 from src import rng
-from src.bezier import FastBezierSegment
+from src.bezier import FastBezierSegment, ConsistentBezierSegment
 from src.helpers import round_to
 
 
@@ -51,7 +51,7 @@ class CamoWorm:
         p0 = [self.x + dx + p0[0], self.y + dy + p0[1]]
         p2 = [self.x + dx + p2[0], self.y + dy + p2[1]]
         p1 = [self.x + dx + p1[0], self.y + dy + p1[1]]
-        self.bezier: FastBezierSegment = FastBezierSegment(np.array([p0, p1, p2]))
+        self.bezier: ConsistentBezierSegment = ConsistentBezierSegment(np.array([p0, p1, p2]))
 
     def copy(self, *,
              x: Optional[float] = None,
@@ -96,7 +96,7 @@ class CamoWorm:
         theta = 2 * math.pi * rng.random()
         dr = 5 * rng.standard_normal()
         colour = rng.random()
-        width = 4 + 1.5 * rng.standard_gamma(1)
+        width = 4 + 2.5 * rng.standard_gamma(1)
         return CamoWorm(midx, midy, r, theta, dr, math.pi/2, width, colour)
 
     def control_points(self) -> npt.NDArray[np.float64]:

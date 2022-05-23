@@ -1,3 +1,4 @@
+import os
 
 import imageio
 import numpy as np
@@ -43,6 +44,7 @@ def map_vector_to_worm(image: NpImage, worm_vector: psoNDarray) -> CamoWorm:
 
 def run_worm_search_pos(
         image: NpImage,
+        output_dir: str,
         total_worms: int,
         *,
         generations_per_worm: int = 100,
@@ -90,11 +92,13 @@ def run_worm_search_pos(
     def momentum_function(generation: int) -> float:
         return 0.9 - 0.6 * (generation / generations_per_worm)
 
-    progress_image_generator = ProgressImageGenerator(
-        image, "./progress/standard")
-    progress_image_generator_white = ProgressImageGenerator(
-        np.full_like(image, 255.0), "./progress/white")
-    create_and_empty_directory("./progress/overlap")
+    standard_dir = os.path.join(output_dir, "standard")
+    white_dir = os.path.join(output_dir, "white")
+    overlap_dir = os.path.join(output_dir, "overlap")
+
+    progress_image_generator = ProgressImageGenerator(image, standard_dir)
+    progress_image_generator_white = ProgressImageGenerator(np.full_like(image, 255.0), white_dir)
+    create_and_empty_directory(overlap_dir)
 
     worms = []
     masks = []
@@ -120,6 +124,9 @@ def run_worm_search_pos(
         worm = map_vector_to_worm(image, worm_vector)
         worm_mask = WormMask.from_worm(worm, image)
         worm.colour = worm_mask.median_colour()
+        if worm.colour is None:
+            # Pretty much just worms that are outside the image.
+            worm.colour = 255
 
         overlap_image = overlap_image * overlap_image_decay_rate
         worm_mask.draw_into(overlap_image, 255)
@@ -129,7 +136,10 @@ def run_worm_search_pos(
 
         progress_image_generator.save_progress_image(worms, masks, index)
         progress_image_generator_white.save_progress_image(worms, masks, index)
-        imageio.imwrite(f"progress/overlap/gen-{index:06}.png", np.rot90(overlap_image, 2).astype(np.uint8))
+        imageio.imwrite(
+            os.path.join(overlap_dir, f"gen-{index:06}.png"),
+            np.rot90(overlap_image, 2).astype(np.uint8)
+        )
 
     progress_image_generator.generate_gif()
     progress_image_generator_white.generate_gif()
