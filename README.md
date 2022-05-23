@@ -13,6 +13,7 @@ A jupytter notebook is also avaliable.
 ### In Docker
 
 The project can be run in docker to improve compatability and ease of deployment in cloud environments.
+The docker start script is currently setup to run the swarm algorithm.
 
 The docker run script maps the progress frames generated into `./progress/<unix epoch at start>/`.
 **Note** that these files and folders will be owned by **root**.
@@ -55,8 +56,11 @@ chmod +x ./bin/*
 # Install the required python packages
 pip install -r requirements.txt
 
-# Run the program
-python main.py <number of generations> <overlap decay rate>
+# Greedy Algo
+python main.py greedy ./images/original-cropped.png ./progress 50 50
+
+# Swarm Algo
+python main.py swarm ./images/inputs/original-cropped.png ./progress 50 0.9
 ```
 
 ### Notebook
