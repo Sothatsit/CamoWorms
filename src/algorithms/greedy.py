@@ -34,7 +34,10 @@ class GreedyClewEvolution(GeneticClewEvolution):
             profile_file=profile_file
         )
 
-    def score(self, worm: CamoWorm, worm_mask: WormMask, *, allowed_overlap: float = 0.1, for_new_worm: bool = False) -> float:
+    def score(
+            self, worm: CamoWorm, worm_mask: WormMask, *,
+            allowed_overlap: float = 0.1, overlap_max_colour_diff: float = 0.4,
+            for_new_worm: bool = False) -> float:
         """ A basic benchmark scoring function. """
         score = 100 * score_worm_isolated(worm.colour, worm_mask, worm_mask.create_outer_mask())
 
@@ -46,7 +49,9 @@ class GreedyClewEvolution(GeneticClewEvolution):
             overlap_penalty = 0.0
             for other_index in range(len(self.clew)):
                 other_worm = self.clew[other_index]
-                if worm is other_worm:
+                # We don't compare worms that have vastly different colours, as it demotes
+                # having worms on the bright and dark sides of an edge.
+                if worm is other_worm or abs(worm.colour - other_worm.colour) > overlap_max_colour_diff:
                     continue
 
                 other_worm_mask = self.clew_masks[other_index]
