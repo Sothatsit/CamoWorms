@@ -32,6 +32,10 @@ def mean_window(image: NpImage, *, window=3, times=1) -> NpImage:
         image = convolve2d(image, np.ones((window, window)) / (window ** 2), mode="same")
     return image
 
+def threhold_filter(image: NpImage) -> NpImage:
+    image[image < 50] = 0
+    return image
+
 
 def median_window(image: NpImage, *, window=3, times=1) -> NpImage:
     """ Run an averaging filter over the image. """

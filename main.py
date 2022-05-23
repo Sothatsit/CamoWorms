@@ -14,6 +14,7 @@ from src import NpImage
 from src.algorithms.greedy import GreedyClewEvolution
 from src.image_loading import read_image
 from src.implementations.pso_worm import run_worm_search_pos
+from src.image_manipulation import threhold_filter
 
 from multiprocessing import Pool
 
@@ -122,12 +123,15 @@ if __name__ == "__main__":
         sys.exit(1)
 
     do_profile = False
+    do_pp = False
     args = list(sys.argv[1:])
     for index in range(len(args)):
         if args[index].lower() == "--profile":
             do_profile = True
             del args[index]
-            break
+        elif args[index].lower() == "-pp":
+            do_pp = True
+            del args[index]
 
     algorithm = args[0].lower()
     input_image_path = args[1]
@@ -195,6 +199,9 @@ if __name__ == "__main__":
         elif not os.path.isdir(im_output_dir):
             perr("{} is not a directory".format(im_output_dir))
             sys.exit(1)
+        
+        if(do_pp): 
+            threhold_filter(image)
 
         imageio.imwrite(os.path.join(im_output_dir, "target.png"), np.flipud(image)[:, ::-1].astype(np.uint8))
         args.append((im_name, algo_func, image, im_output_dir, algo_args, do_profile))
