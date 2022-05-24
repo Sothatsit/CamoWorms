@@ -131,7 +131,6 @@ if __name__ == "__main__":
     do_median = False
     args = list(sys.argv[1:])
     for index in range(len(args)):
-        print(args[index])
         if args[index].lower() == "--profile":
             do_profile = True
             del args[index]
