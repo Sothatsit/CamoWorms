@@ -7,12 +7,12 @@ The original project brief can be found in [`./docs/practical-project.pdf`](./do
 
 ## Running
 
-This project can be run natively or inside docker for improved compatability.
-A jupytter notebook is also avaliable.
+This project can be run natively or inside docker for improved compatibility.
+A jupyter notebook is also available.
 
 ### In Docker
 
-The project can be run in docker to improve compatability and ease of deployment in cloud environments.
+The project can be run in docker to improve compatibility and ease of deployment in cloud environments.
 The docker start script is currently setup to run the swarm algorithm.
 
 The docker run script maps the progress frames generated into `./progress/<unix epoch at start>/`.
@@ -31,7 +31,7 @@ Ownership can be easily updated using `chown`.
 Before the following steps `opencv` must be removed from `requirements.txt`.
 
 ```bash
-# Update script permissions to be runable
+# Update script permissions to be runnable
 chmod +x ./bin/*
 
 # Build the docker image
@@ -57,7 +57,7 @@ chmod +x ./bin/*
 pip install -r requirements.txt
 
 # Greedy Algo
-python main.py greedy ./images/original-cropped.png ./progress 50 50
+python main.py greedy ./images/inputs/original-cropped.png ./progress 50 50
 
 # Swarm Algo
 python main.py swarm ./images/inputs/original-cropped.png ./progress 50 0.9
@@ -65,4 +65,4 @@ python main.py swarm ./images/inputs/original-cropped.png ./progress 50 0.9
 
 ### Notebook
 
-A jupyter notebook ([`CamoWorms.ipynb`](./CamoWorms.ipynb)) is also provided that includes demos of mask generation, worm manipluation, and the greedy algorithm.
+A jupyter notebook ([`CamoWorms.ipynb`](./CamoWorms.ipynb)) is also provided that includes demos of mask generation, worm manipulation, and the greedy algorithm.
