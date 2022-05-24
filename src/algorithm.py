@@ -11,7 +11,7 @@ from typing import Tuple, Optional, Iterable
 
 from skimage.metrics import structural_similarity
 
-from src import NpImage
+from src import NpImage, NpImageDType
 from src.image_manipulation import find_median_colour
 from src.plotting import Drawing
 from src.progress_image_generator import ProgressImageGenerator
@@ -55,7 +55,7 @@ class GeneticClewEvolution:
         self.progress_image_generator: Optional[ProgressImageGenerator] = None
         if progress_dir is not None:
             self.progress_image_generator = ProgressImageGenerator(
-                np.full(image.shape, find_median_colour(image)), progress_dir)
+                np.full(image.shape, 40, dtype=NpImageDType), progress_dir)
             self.progress_image_generator.save_progress_image(
                 self.clew, self.clew_masks, self.generation)
 
