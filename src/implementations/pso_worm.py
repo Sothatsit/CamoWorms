@@ -3,7 +3,7 @@ import os
 import imageio
 import numpy as np
 from src import NpImage
-from src.algorithms.local_search import score_worm_isolated
+from src.algorithms.base_score import score_worm_isolated
 from src.algorithms.particle_swarm import ParticleSwarmOptimisation, psoNDarray
 from src.progress_image_generator import ProgressImageGenerator, create_and_empty_directory
 from src.worm import CamoWorm

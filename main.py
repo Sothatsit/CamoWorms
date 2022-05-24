@@ -130,16 +130,20 @@ if __name__ == "__main__":
     do_thres = False
     do_median = False
     args = list(sys.argv[1:])
-    for index in range(len(args)):
-        if args[index].lower() == "--profile":
-            do_profile = True
+
+    index = 0
+    while index < len(args):
+        arg = args[index].lower()
+        if arg == "--profile":
             del args[index]
-        elif args[index].lower() == "--threshold":
+        elif arg == "--threshold":
             do_thres = True
-            #del args[index]
-        elif args[index].lower() == "--median":
+            del args[index]
+        elif arg == "--median":
             do_median = True
-            #del args[index]
+            del args[index]
+        else:
+            index += 1
 
     algorithm = args[0].lower()
     input_image_path = args[1]

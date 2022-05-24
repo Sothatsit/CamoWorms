@@ -6,7 +6,7 @@ from typing import Tuple, Optional
 
 from src import NpImage, rng
 from src.algorithm import GeneticClewEvolution
-from src.algorithms.local_search import score_worm_isolated
+from src.algorithms.base_score import score_worm_isolated
 from src.helpers import clamp
 from src.image_manipulation import edge_enhance
 from src.worm import CamoWorm
