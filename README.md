@@ -4,7 +4,7 @@ Welcome to,
 <img src="example-results/Text/camoworms.gif" width="400"> !
 
 
-CamoWorms is a project that evolves camouflage worms to replicate images. This aims to highlight the major trends in images, and the algorithms are specifically tuned for reducing visual noise in Optical Coherence Tomography (OCT) images.
+CamoWorms is a project that evolves camouflage worms to replicate images. This aims to highlight the major trends in images. The available algorithms are specifically tuned for reducing visual noise in Optical Coherence Tomography (OCT) images.
 
 This project was created as part of a group project for the CITS4404 unit at UWA in semester 1 of 2022. The original project brief for the project can be found in [`./docs/practical-project.pdf`](./docs/practical-project.pdf).
 
