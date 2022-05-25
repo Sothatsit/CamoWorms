@@ -31,11 +31,11 @@ def map_vector_to_worm(image: NpImage, worm_vector: psoNDarray) -> CamoWorm:
     worm = CamoWorm(
         x=mapped_vector.item(0) * x_lim,
         y=mapped_vector.item(1) * y_lim,
-        r=20 + mapped_vector.item(2) * 180,
+        r=10 + mapped_vector.item(2) * 50,
         theta=2 * np.pi * mapped_vector.item(3),
-        deviation_r=5 + mapped_vector.item(4) * 100,
+        deviation_r=2 + mapped_vector.item(4) * 30,
         deviation_gamma=2 * np.pi * mapped_vector.item(5),
-        width=3 + mapped_vector.item(6) * 50,
+        width=5 + mapped_vector.item(6) * 10,
         # There is no value in learning the background colour when we can just match the median value
         colour=255)
 
@@ -74,7 +74,7 @@ def run_worm_search_pos(
 
         blank_image: NpImage = np.zeros(image.shape, dtype=np.float64)
         mask.draw_into(blank_image, 255)
-        overlap_cost: float = np.sum(blank_image * overlap_image) / 20_000_000.0
+        overlap_cost: float = np.sum(blank_image * overlap_image) / 1_000_000.0
 
         return main_cost + overlap_cost
 
@@ -100,8 +100,8 @@ def run_worm_search_pos(
     progress_image_generator_white = ProgressImageGenerator(np.full_like(image, 255.0), white_dir)
     create_and_empty_directory(overlap_dir)
 
-    worms = []
-    masks = []
+    worms: list[CamoWorm] = []
+    masks: list[WormMask] = []
 
     for index in range(total_worms):
 
