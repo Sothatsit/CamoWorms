@@ -11,11 +11,11 @@ This project was created as part of a group project for the CITS4404 unit at UWA
 ## Example Worms
 **Input OCT Image**
 
-![Original image](example-inputs/original-cropped.png)
+![Original image](example-inputs/Mendeley/DME-1102486-3.jpeg)
 
 **Output Camo Worms Image**
 
-![Image created using worms](example-results/original-cropped.png)
+![Image created using worms](example-results/Mendeley/mendeley-DME-1102486-3.png)
 
 ## Running
 
