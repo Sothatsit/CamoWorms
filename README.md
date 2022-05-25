@@ -1,9 +1,19 @@
-# Camo Worms
+# 🐛 Camo Worms
 
-This repository contains our work on the 2022 semester 1 CITS4404 group project.
+![Camo Worms Text](example-results/Text/camoworms.gif)
 
-The purpose of this project was to explore the use of population based algorithms to reduce the visual noise in Optical Coherence Tomography (OCT) images.
-The original project brief can be found in [`./docs/practical-project.pdf`](./docs/practical-project.pdf).
+CamoWorms is a project that evolves camouflage worms to replicate images. This aims to highlight the major trends in images, and the algorithms are specifically tuned for reducing visual noise in Optical Coherence Tomography (OCT) images.
+
+This project was created as part of a group project for the CITS4404 unit at UWA in semester 1 of 2022. The original project brief for the project can be found in [`./docs/practical-project.pdf`](./docs/practical-project.pdf).
+
+## Example Worms
+**Input OCT Image**
+
+![Original image](example-inputs/original-cropped.png)
+
+**Output Camo Worms Image**
+
+![Image created using worms](example-results/original-cropped.png)
 
 ## Running
 
