@@ -1,7 +1,6 @@
-# 🐛 Camo Worms
 Welcome to,
 
-<img src="example-results/Text/camoworms.gif" width="400"> !
+<img src="example-results/Text/camoworms.gif" width="450">
 
 
 CamoWorms is a project that evolves camouflage worms to replicate images. This aims to highlight the major trends in images. The available algorithms are specifically tuned for reducing visual noise in Optical Coherence Tomography (OCT) images.
